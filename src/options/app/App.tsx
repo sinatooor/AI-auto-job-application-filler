@@ -229,6 +229,7 @@ const LLMSettingsSection: FC = () => {
         type={showApiKey ? 'text' : 'password'}
         value={settings.apiKey}
         onChange={handleApiKeyChange}
+        helperText="Settings are saved automatically"
         InputProps={{
           endAdornment: (
             <InputAdornment position="end">
