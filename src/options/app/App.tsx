@@ -466,7 +466,7 @@ const CVSection: FC = () => {
 
       {cvData?.originalFile?.type === 'application/pdf' && (
         <Typography variant="body2" color="info.main">
-          PDF files are processed directly by Gemini AI for best results.
+          PDF files are sent directly to the AI for processing - no text extraction needed.
         </Typography>
       )}
 

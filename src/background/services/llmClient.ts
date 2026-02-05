@@ -153,6 +153,122 @@ async function callGeminiWithFile(
   return data.candidates?.[0]?.content?.parts?.[0]?.text || ''
 }
 
+/**
+ * Calls OpenAI API with a file (PDF) for content generation.
+ * Uses the file content type in chat completions for GPT-4o models.
+ */
+async function callOpenAIWithFile(
+  config: LLMClientConfig,
+  file: LocalStorageFile,
+  systemPrompt: string,
+  userPrompt: string
+): Promise<string> {
+  // Extract base64 data from the DataURL
+  const base64Data = file.body.split(',')[1]
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'file',
+              file: {
+                filename: file.name,
+                file_data: `data:${file.type};base64,${base64Data}`,
+              },
+            },
+            {
+              type: 'text',
+              text: userPrompt,
+            },
+          ],
+        },
+      ],
+      temperature: 0.3,
+      max_tokens: 8192,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error?.message || `OpenAI API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return data.choices[0]?.message?.content || ''
+}
+
+/**
+ * Calls Anthropic API with a file (PDF) for content generation.
+ * Claude 3.5 supports PDFs via base64 document blocks.
+ */
+async function callAnthropicWithFile(
+  config: LLMClientConfig,
+  file: LocalStorageFile,
+  systemPrompt: string,
+  userPrompt: string
+): Promise<string> {
+  // Extract base64 data from the DataURL
+  const base64Data = file.body.split(',')[1]
+  
+  // Determine media type for Anthropic
+  let mediaType = 'application/pdf'
+  if (file.type) {
+    mediaType = file.type
+  }
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': config.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: config.model,
+      max_tokens: 8192,
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: base64Data,
+              },
+            },
+            {
+              type: 'text',
+              text: userPrompt,
+            },
+          ],
+        },
+      ],
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error?.message || `Anthropic API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return data.content?.[0]?.text || ''
+}
+
 // OpenAI API client
 async function callOpenAI(config: LLMClientConfig, messages: ChatMessage[]): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -354,21 +470,33 @@ Return ONLY valid JSON matching this exact structure (omit fields that are not p
 
 Be thorough and extract all available information. Parse dates into readable formats. Return ONLY the JSON, no other text.`
 
+  const userPrompt = 'Parse this CV/Resume document and extract all information.'
+
   try {
     let response: string
 
-    // If we have a file and the provider is Gemini, use the Files API for direct file processing
-    if (file && config.provider === 'gemini') {
-      // Upload the file to Gemini Files API
-      const uploadedFile = await uploadFileToGemini(config.apiKey, file)
-      
-      // Call Gemini with the uploaded file reference
-      response = await callGeminiWithFile(
-        config,
-        uploadedFile,
-        systemPrompt,
-        'Parse this CV/Resume document and extract all information.'
-      )
+    // If we have a file, use provider-specific file upload
+    if (file) {
+      switch (config.provider) {
+        case 'gemini': {
+          // Upload the file to Gemini Files API
+          const uploadedFile = await uploadFileToGemini(config.apiKey, file)
+          response = await callGeminiWithFile(config, uploadedFile, systemPrompt, userPrompt)
+          break
+        }
+        case 'openai': {
+          // Use OpenAI's file content type in chat completions
+          response = await callOpenAIWithFile(config, file, systemPrompt, userPrompt)
+          break
+        }
+        case 'anthropic': {
+          // Use Anthropic's document block for PDFs
+          response = await callAnthropicWithFile(config, file, systemPrompt, userPrompt)
+          break
+        }
+        default:
+          throw new Error(`Unknown provider: ${config.provider}`)
+      }
     } else if (cvText) {
       // Fallback to text-based processing
       response = await callLLM(config, [
