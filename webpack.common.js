@@ -12,6 +12,7 @@ const envKeys = {
 module.exports = {
   entry: {
     popup: path.resolve("src/popup/popup.tsx"),
+    options: path.resolve("src/options/options.tsx"),
     inject: path.resolve('src/inject/inject.ts'),
     background: path.resolve('src/background/background.ts'),
     contentScript: path.resolve('src/contentScript/contentScript.ts'),
@@ -46,7 +47,7 @@ module.exports = {
       ],
     }),
     new webpack.DefinePlugin(envKeys),
-    ...getHtmlPlugins(['popup']),
+    ...getHtmlPlugins(['popup', 'options']),
   ],
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],

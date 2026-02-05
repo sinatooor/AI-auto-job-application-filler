@@ -5,6 +5,11 @@ import { answers1010, migrate1010 } from './utils/storage/Answers1010'
 import { convert106To1010, convert1010To106 } from './utils/storage/DataStore'
 import { SavedAnswer } from './utils/storage/DataStoreTypes'
 import { migrateEducation } from './utils/storage/migrateEducationSectionNames'
+import { 
+  getCVData, 
+  getActiveJobContext, 
+  getLLMSettings 
+} from './utils/storage/LLMSettingsStore'
 
 // Regiser server and methods accessible to injected script.
 const server = new Server(process.env.CONTENT_SCRIPT_URL)
@@ -26,6 +31,64 @@ server.register('getAnswer', async (fieldPath: FieldPath) => {
 
 server.register('deleteAnswer', async (id: number) => {
   return answers1010.delete(id)
+})
+
+// LLM-related methods
+server.register('getLLMSettings', async () => {
+  return getLLMSettings()
+})
+
+server.register('getLLMSuggestion', async (payload: { fieldPath: FieldPath, currentValue?: any }) => {
+  const settings = await getLLMSettings()
+  if (!settings.apiKey) {
+    return { success: false, error: 'API key not configured' }
+  }
+
+  // Get CV data and job context
+  const cvData = await getCVData()
+  const jobContext = await getActiveJobContext()
+
+  // Get past answers if enabled
+  let pastAnswers: Array<{ fieldName: string; answer: any }> | undefined
+  if (settings.includeHistoryContext) {
+    const allAnswers = answers1010.getAll()
+    pastAnswers = allAnswers.slice(0, 20).map(a => ({
+      fieldName: a.fieldName,
+      answer: a.answer,
+    }))
+  }
+
+  // Call background script to get LLM suggestion
+  return chrome.runtime.sendMessage({
+    type: 'LLM_SUGGEST_FIELD',
+    payload: {
+      fieldPath: payload.fieldPath,
+      currentValue: payload.currentValue,
+      cvData: cvData.extractedData,
+      jobContext,
+      pastAnswers,
+    },
+  })
+})
+
+server.register('getAnswerConfidence', async (fieldPath: FieldPath) => {
+  const results = answers1010.search(fieldPath)
+  if (results.length === 0) {
+    return { hasAnswer: false, confidence: 0 }
+  }
+  
+  const bestMatch = results[0]
+  let confidence = 0
+  
+  if (bestMatch.matchType === 'exact') {
+    confidence = 1.0
+  } else if (bestMatch.matchType?.startsWith('Similar:')) {
+    // Extract score from "Similar: 0.xxx"
+    const scoreStr = bestMatch.matchType.replace('Similar: ', '')
+    confidence = parseFloat(scoreStr) || 0
+  }
+  
+  return { hasAnswer: true, confidence, answer: convert1010To106(bestMatch) }
 })
 
 // inject script

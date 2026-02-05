@@ -196,6 +196,22 @@ export abstract class BaseFormInput<AnswerType> {
   }
 
   /**
+   * Fill the field with an AI-suggested value.
+   * This is a generic implementation that works for text inputs.
+   * Subclasses may need to override this for more complex field types.
+   */
+  async fillWithValue(value: any): Promise<void> {
+    // Default implementation: store the value as an answer and then fill
+    // This works for most field types
+    const answer: Answer = {
+      path: this.path,
+      answer: value,
+    }
+    await contentScriptAPI.send('addAnswer', answer)
+    await this.fill()
+  }
+
+  /**
    * general logic that applies to all fields.
    *
    * for most fields it's enough to put the actual filling logic in the `fillField` method.

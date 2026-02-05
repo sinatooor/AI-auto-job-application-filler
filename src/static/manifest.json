@@ -8,7 +8,10 @@
     "default_title": "Autofill Job Applications - JobAppFiller",
     "default_popup": "popup.html"
   },
-
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "js": [
@@ -38,5 +41,10 @@
   "permissions": [
     "storage",
     "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "https://api.openai.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.anthropic.com/*"
   ]
 }

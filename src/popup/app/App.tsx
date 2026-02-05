@@ -71,6 +71,17 @@ export const App: FC<{}> = () => {
               Tutorial
             </Button>
           </Stack>
+          
+          <Box sx={{ mt: 2 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              onClick={() => chrome.runtime.openOptionsPage()}
+            >
+              AI Settings & CV Upload
+            </Button>
+          </Box>
           <Divider sx={{ my: 2 }} />
 
           <Typography variant="h5" sx={{ mt: 2, mb: 1 }}>
