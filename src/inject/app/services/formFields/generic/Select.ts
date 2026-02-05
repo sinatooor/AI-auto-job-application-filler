@@ -1,5 +1,4 @@
 import fieldFillerQueue from '@src/shared/utils/fieldFillerQueue'
-import { getElement } from '@src/shared/utils/getElements'
 import { GenericBaseInput } from './GenericBaseInput'
 import stringMatch from '@src/shared/utils/stringMatch'
 
@@ -7,32 +6,38 @@ import stringMatch from '@src/shared/utils/stringMatch'
  * Handles generic select/dropdown fields on any website.
  */
 export class Select extends GenericBaseInput<string> {
-  static XPATH = [
-    ".//div[.//select]",
-    "[.//label or ./preceding-sibling::label or ./following-sibling::label]",
-    "[not(ancestor::*[@job-app-filler])]",
-  ].join('')
+  // Directly target select elements
+  static XPATH = ".//select[not(@job-app-filler)]"
 
   fieldType = 'Select'
 
   inputElement(): HTMLSelectElement | null {
-    return getElement(this.element, './/select') as HTMLSelectElement | null
+    // The element IS the select element for generic inputs
+    return this.element as HTMLSelectElement
   }
 
   public get fieldName(): string {
     const select = this.inputElement()
     
     // Try label first
-    const labelText = super.fieldName
-    if (labelText) return labelText.trim()
+    const labelEl = this.labelElement
+    if (labelEl?.innerText) return labelEl.innerText.trim()
     
     // Try aria-label
     if (select?.getAttribute('aria-label')) return select.getAttribute('aria-label')!
     
-    // Try name attribute
-    if (select?.name) return select.name
+    // Try title attribute
+    if (select?.title) return select.title
     
-    return 'Unknown Field'
+    // Try name attribute
+    if (select?.name) {
+      return select.name
+        .replace(/[_-]/g, ' ')
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .trim()
+    }
+    
+    return 'Dropdown'
   }
 
   listenForChanges(): void {

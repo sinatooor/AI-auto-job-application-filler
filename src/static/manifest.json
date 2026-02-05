@@ -38,7 +38,9 @@
   ],
   "permissions": [
     "storage",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "contextMenus",
+    "activeTab"
   ],
   "host_permissions": [
     "https://api.openai.com/*",

@@ -133,6 +133,7 @@ export type LLMMessageType =
   | 'LLM_TEST_CONNECTION'
   | 'LLM_GENERATE_COVER_LETTER'
   | 'LLM_ANALYZE_CV'
+  | 'LLM_AI_FILL_PAGE'
 
 export interface LLMMessage {
   type: LLMMessageType
@@ -142,6 +143,28 @@ export interface LLMMessage {
 export interface LLMProcessCVPayload {
   text?: string
   file?: LocalStorageFile
+}
+
+export interface PageField {
+  selector: string
+  label: string
+  type: string
+  currentValue: string
+  tagName: string
+  options?: string[] // For select elements
+}
+
+export interface AIFillPagePayload {
+  pageFields: PageField[]
+  cvData?: ExtractedCVData
+  jobContext?: JobContext
+}
+
+export interface AIFillPageResult {
+  filledFields: Array<{
+    selector: string
+    value: string
+  }>
 }
 
 export interface LLMSuggestFieldPayload {

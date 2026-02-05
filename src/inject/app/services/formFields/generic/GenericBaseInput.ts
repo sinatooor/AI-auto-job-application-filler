@@ -7,6 +7,10 @@ export abstract class GenericBaseInput<
 > extends BaseFormInput<AnswerType> {
   abstract inputElement(): HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null
 
+  /**
+   * For generic inputs, we target the input element directly, not a wrapper.
+   * The element IS the input element.
+   */
   static async autoDiscover(node: Node = document) {
     const elements = getElements(node, this.XPATH)
     elements.forEach((el) => {
@@ -22,7 +26,7 @@ export abstract class GenericBaseInput<
    * The element to insert the widget before
    */
   inputDisplayElement(): HTMLElement | null {
-    return this.inputElement()
+    return this.element
   }
 
   /**
@@ -52,12 +56,48 @@ export abstract class GenericBaseInput<
   }
 
   /**
+   * Find the label for this input element
+   */
+  get labelElement(): HTMLElement | null {
+    const input = this.element as HTMLInputElement
+    
+    // Method 1: Check for associated label via 'for' attribute
+    if (input.id) {
+      const label = document.querySelector(`label[for="${input.id}"]`) as HTMLElement
+      if (label) return label
+    }
+    
+    // Method 2: Check if input is inside a label
+    const parentLabel = input.closest('label') as HTMLElement
+    if (parentLabel) return parentLabel
+    
+    // Method 3: Check for preceding sibling label
+    let prev = input.previousElementSibling
+    while (prev) {
+      if (prev.tagName === 'LABEL') return prev as HTMLElement
+      prev = prev.previousElementSibling
+    }
+    
+    // Method 4: Check parent's children for a label
+    const parent = input.parentElement
+    if (parent) {
+      const label = parent.querySelector('label') as HTMLElement
+      if (label) return label
+    }
+    
+    return null
+  }
+
+  /**
    * Attach widget before the input element
    */
   attachReactApp(app: React.ReactNode, inputContainer: HTMLElement) {
     const rootElement = document.createElement('div')
     rootElement.classList.add('jaf-widget')
     rootElement.setAttribute('data-jaf-field', 'true')
+    rootElement.style.display = 'inline-block'
+    rootElement.style.marginRight = '4px'
+    rootElement.style.verticalAlign = 'middle'
     
     const displayEl = this.inputDisplayElement()
     if (displayEl && displayEl.parentElement) {

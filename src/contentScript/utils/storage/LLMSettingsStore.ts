@@ -16,6 +16,17 @@ const STORAGE_KEYS = {
   CV_DATA: 'cv_data',
   JOB_CONTEXTS: 'job_contexts',
   COVER_LETTERS: 'cover_letters',
+  GLOBAL_ACTIVATION: 'global_activation',
+}
+
+// Global Activation State
+export async function getGlobalActivation(): Promise<boolean> {
+  const result = await chrome.storage.local.get(STORAGE_KEYS.GLOBAL_ACTIVATION)
+  return result[STORAGE_KEYS.GLOBAL_ACTIVATION] ?? false
+}
+
+export async function setGlobalActivation(enabled: boolean): Promise<void> {
+  await chrome.storage.local.set({ [STORAGE_KEYS.GLOBAL_ACTIVATION]: enabled })
 }
 
 // LLM Settings

@@ -1,4 +1,4 @@
-import React, { FC, useState } from 'react'
+import React, { FC, useState, useEffect } from 'react'
 import './popup.css'
 import {
   Box,
@@ -6,10 +6,12 @@ import {
   CircularProgress,
   Container,
   Divider,
+  FormControlLabel,
   IconButton,
   Snackbar,
   SnackbarCloseReason,
   Stack,
+  Switch,
   Tooltip,
   Typography,
 } from '@mui/material'
@@ -20,17 +22,26 @@ import { ContentCopyIcon, GitHubIcon, OpenInNewIcon } from '@src/shared/utils/ic
 import { LogoTitleBar } from '@src/shared/components/LogoTitleBar'
 import { Tracker } from './Tracker'
 import HistoryIcon from '@mui/icons-material/History'
-import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 
 const EMAIL_ADDRESS = 'berellevy+chromeextensions@gmail.com'
+
+// Storage keys - must match LLMSettingsStore.ts
+const STORAGE_KEY_GLOBAL_ACTIVATION = 'global_activation'
 
 export const App: FC<{}> = () => {
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false)
   const [snackbarMessage, setSnackbarMessage] = useState<string>('')
   const [view, setView] = useState<'home' | 'tracker'>('home')
-  const [activating, setActivating] = useState<boolean>(false)
+  const [isActivated, setIsActivated] = useState<boolean>(false)
   const [autoFilling, setAutoFilling] = useState<boolean>(false)
+
+  // Load activation state on mount
+  useEffect(() => {
+    chrome.storage.local.get(STORAGE_KEY_GLOBAL_ACTIVATION).then((result) => {
+      setIsActivated(result[STORAGE_KEY_GLOBAL_ACTIVATION] ?? false)
+    })
+  }, [])
 
   const handleCloseSnackbar = (
     event: React.SyntheticEvent | Event,
@@ -39,21 +50,28 @@ export const App: FC<{}> = () => {
     setSnackbarOpen(false)
   }
 
-  const handleActivate = async () => {
-    setActivating(true)
-    try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
-      if (tabs[0]?.id) {
-        await chrome.tabs.sendMessage(tabs[0].id, { type: 'ACTIVATE_EXTENSION' })
-        setSnackbarMessage('Extension activated! Form fields detected.')
-        setSnackbarOpen(true)
+  const handleToggleActivation = async () => {
+    const newState = !isActivated
+    setIsActivated(newState)
+    
+    // Save to storage
+    await chrome.storage.local.set({ [STORAGE_KEY_GLOBAL_ACTIVATION]: newState })
+    
+    if (newState) {
+      // When turning on, also activate the current tab
+      try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+        if (tabs[0]?.id) {
+          await chrome.tabs.sendMessage(tabs[0].id, { type: 'ACTIVATE_EXTENSION' })
+        }
+      } catch (err) {
+        // Ignore errors - the page might not have the content script yet
       }
-    } catch (err) {
-      setSnackbarMessage('Failed to activate. Try refreshing the page first.')
-      setSnackbarOpen(true)
-    } finally {
-      setActivating(false)
+      setSnackbarMessage('Extension enabled! Will auto-activate on all pages.')
+    } else {
+      setSnackbarMessage('Extension disabled.')
     }
+    setSnackbarOpen(true)
   }
 
   const handleAutoFillWithAI = async () => {
@@ -92,25 +110,48 @@ export const App: FC<{}> = () => {
                 The Best Autofill Since Sliced Bread.
               </Typography>
               
-              {/* Primary Action Buttons */}
+              {/* Global Activation Toggle */}
+              <Box sx={{ 
+                mb: 2, 
+                p: 1.5, 
+                border: '1px solid', 
+                borderColor: isActivated ? 'success.main' : 'grey.400',
+                borderRadius: 1,
+                backgroundColor: isActivated ? 'success.light' : 'transparent',
+                transition: 'all 0.2s'
+              }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={isActivated}
+                      onChange={handleToggleActivation}
+                      color="success"
+                    />
+                  }
+                  label={
+                    <Typography variant="body1" fontWeight="medium">
+                      {isActivated ? 'Extension Active' : 'Extension Off'}
+                    </Typography>
+                  }
+                  sx={{ m: 0, width: '100%', justifyContent: 'space-between' }}
+                  labelPlacement="start"
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                  {isActivated 
+                    ? 'Auto-detecting form fields on all websites' 
+                    : 'Enable to detect and fill form fields'}
+                </Typography>
+              </Box>
+
+              {/* AI Auto Fill Button */}
               <Stack spacing={1} sx={{ mb: 2 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  fullWidth
-                  startIcon={activating ? <CircularProgress size={18} color="inherit" /> : <PlayArrowIcon />}
-                  onClick={handleActivate}
-                  disabled={activating}
-                >
-                  {activating ? 'Activating...' : 'Activate'}
-                </Button>
                 <Button
                   variant="contained"
                   color="secondary"
                   fullWidth
                   startIcon={autoFilling ? <CircularProgress size={18} color="inherit" /> : <AutoAwesomeIcon />}
                   onClick={handleAutoFillWithAI}
-                  disabled={autoFilling}
+                  disabled={autoFilling || !isActivated}
                 >
                   {autoFilling ? 'Filling...' : 'Auto Fill with AI'}
                 </Button>

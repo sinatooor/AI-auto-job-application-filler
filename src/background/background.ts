@@ -1,4 +1,4 @@
-import { getLLMSettings } from '@src/contentScript/utils/storage/LLMSettingsStore'
+import { getLLMSettings, getCVData, getActiveJobContext } from '@src/contentScript/utils/storage/LLMSettingsStore'
 import {
   AnalyzeCVPayload,
   GenerateCoverLetterPayload,
@@ -7,7 +7,35 @@ import {
   LLMResponse,
   LLMSuggestFieldPayload,
 } from '@src/contentScript/utils/storage/LLMTypes'
-import { analyzeCV, generateCoverLetter, processCV, suggestFieldValue, testConnection } from './services/llmClient'
+import { analyzeCV, generateCoverLetter, processCV, suggestFieldValue, testConnection, fillPageWithAI } from './services/llmClient'
+
+// Create context menu on extension installation
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'jaf-register-field',
+    title: 'Add to Job App Filler',
+    contexts: ['editable', 'page'],
+  })
+  
+  chrome.contextMenus.create({
+    id: 'jaf-ai-fill-page',
+    title: 'AI Fill All Fields',
+    contexts: ['page'],
+  })
+})
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (!tab?.id) return
+  
+  if (info.menuItemId === 'jaf-register-field') {
+    // Send message to content script to register the clicked element
+    await chrome.tabs.sendMessage(tab.id, { type: 'REGISTER_CLICKED_ELEMENT' })
+  } else if (info.menuItemId === 'jaf-ai-fill-page') {
+    // Trigger AI fill for the entire page
+    await chrome.tabs.sendMessage(tab.id, { type: 'AI_FILL_PAGE' })
+  }
+})
 
 // Handle messages from content scripts and popup/options
 chrome.runtime.onMessage.addListener(
@@ -82,10 +110,23 @@ async function handleMessage(message: LLMMessage): Promise<LLMResponse> {
 
     case 'LLM_ANALYZE_CV': {
       const payload = message.payload as AnalyzeCVPayload
-      if (!payload.cvText || !payload.jobContext) {
-        return { success: false, error: 'CV text and job context are required' }
+      if (!payload.cvText && !payload.cvFile) {
+        return { success: false, error: 'CV text or file is required' }
       }
       return analyzeCV(config, payload)
+    }
+
+    case 'LLM_AI_FILL_PAGE': {
+      // Get CV data and job context for AI fill
+      const cvData = await getCVData()
+      const jobContext = await getActiveJobContext()
+      
+      const payload = message.payload as { pageFields: Array<{ selector: string; label: string; type: string; currentValue: string; tagName: string; options?: string[] }> }
+      return fillPageWithAI(config, {
+        pageFields: payload.pageFields,
+        cvData: cvData.extractedData,
+        jobContext,
+      })
     }
 
     default:

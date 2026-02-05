@@ -1,11 +1,15 @@
 import { TextInput } from './TextInput'
 import { Textarea } from './Textarea'
 import { Select } from './Select'
+import { Checkbox } from './Checkbox'
+import { Radio } from './Radio'
 
 const inputs = [
   TextInput,
   Textarea,
   Select,
+  Checkbox,
+  Radio,
 ]
 
 /**

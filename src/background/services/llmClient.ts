@@ -1,5 +1,7 @@
 import mammoth from 'mammoth'
 import { 
+  AIFillPagePayload,
+  AIFillPageResult,
   AnalyzeCVPayload,
   CVAnalysisResult,
   ExtractedCVData, 
@@ -905,6 +907,105 @@ Provide a comprehensive analysis in JSON format:`
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to analyze CV',
+    }
+  }
+}
+
+// AI Fill Page - analyze all form fields on a page and suggest values
+export async function fillPageWithAI(
+  config: LLMClientConfig,
+  payload: AIFillPagePayload
+): Promise<LLMResponse<AIFillPageResult>> {
+  const { pageFields, cvData, jobContext } = payload
+
+  if (!pageFields || pageFields.length === 0) {
+    return { success: false, error: 'No form fields found on the page' }
+  }
+
+  const systemPrompt = `You are an expert form filler assistant. Given a list of form fields and user information, determine the best value to fill in each field.
+
+You will receive:
+1. A list of form fields with their labels, types, and current values
+2. User's CV/resume data (if available)
+3. Job context information (if available)
+
+For each field, determine the most appropriate value based on the user's data. If you cannot determine a value, leave it as null.
+
+Return ONLY valid JSON matching this exact structure:
+{
+  "filledFields": [
+    {
+      "selector": "<the selector from the input>",
+      "value": "<the value to fill, or null if unknown>"
+    }
+  ]
+}
+
+Guidelines:
+- For name fields, use the user's name from CV data
+- For email fields, use the user's email
+- For phone fields, use the user's phone number
+- For address fields, use the user's address information
+- For dropdown/select fields, choose the best matching option from the available options
+- For yes/no or checkbox fields, make reasonable assumptions based on context
+- If a field asks about experience or skills, reference the CV data
+- Be conservative - only fill fields you're confident about
+- Return null for fields you cannot determine
+
+Return ONLY the JSON, no other text.`
+
+  // Build the field descriptions
+  const fieldDescriptions = pageFields.map((field, index) => {
+    let desc = `Field ${index + 1}:
+  - Selector: ${field.selector}
+  - Label: ${field.label || 'No label'}
+  - Type: ${field.type} (${field.tagName})
+  - Current Value: ${field.currentValue || 'empty'}`
+    
+    if (field.options && field.options.length > 0) {
+      desc += `\n  - Options: ${field.options.join(', ')}`
+    }
+    
+    return desc
+  }).join('\n\n')
+
+  let userPrompt = `Fill these form fields with appropriate values:\n\n${fieldDescriptions}`
+
+  if (cvData) {
+    userPrompt += `\n\n=== USER CV DATA ===\n${JSON.stringify(cvData, null, 2)}`
+  }
+
+  if (jobContext) {
+    userPrompt += `\n\n=== JOB CONTEXT ===
+Company: ${jobContext.company || 'Not specified'}
+Role: ${jobContext.role || 'Not specified'}
+Description: ${jobContext.description || 'Not provided'}`
+  }
+
+  userPrompt += '\n\nProvide the values to fill in each field as JSON:'
+
+  try {
+    const response = await callLLM(config, [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ])
+
+    // Extract JSON from response
+    const jsonMatch = response.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      throw new Error('Failed to parse AI response: No JSON in response')
+    }
+
+    const result: AIFillPageResult = JSON.parse(jsonMatch[0])
+    
+    // Filter out null values
+    result.filledFields = result.filledFields.filter(f => f.value !== null && f.value !== undefined)
+    
+    return { success: true, data: result }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fill page with AI',
     }
   }
 }

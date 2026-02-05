@@ -1,38 +1,41 @@
 import fieldFillerQueue from '@src/shared/utils/fieldFillerQueue'
-import { getElement } from '@src/shared/utils/getElements'
 import { GenericBaseInput } from './GenericBaseInput'
 
 /**
  * Handles generic text input fields on any website.
- * Matches input elements with types: text, email, tel, url, search, or no type specified.
+ * Matches input elements with types: text, email, tel, url, search, number, or no type specified.
  */
 export class TextInput extends GenericBaseInput<string> {
-  // Match common form field wrapper patterns
+  // Directly target input elements (not hidden, not password, not checkbox/radio/button types)
   static XPATH = [
-    ".//div[",
-    "  .//input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search' or @type='number']",
-    "  and not(.//input[@type='hidden'])",
+    ".//input[",
+    "  (not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search' or @type='number')",
+    "  and not(@type='hidden')",
+    "  and not(@type='password')",
+    "  and not(@type='checkbox')",
+    "  and not(@type='radio')",
+    "  and not(@type='submit')",
+    "  and not(@type='button')",
+    "  and not(@type='file')",
+    "  and not(@type='image')",
+    "  and not(@type='reset')",
     "]",
-    "[.//label or ./preceding-sibling::label or ./following-sibling::label or .//input[@placeholder]]",
-    "[not(ancestor::*[@job-app-filler])]",
+    "[not(@job-app-filler)]",
   ].join('')
 
   fieldType = 'TextInput'
 
   inputElement(): HTMLInputElement | null {
-    return getElement(
-      this.element,
-      ".//input[not(@type) or @type='text' or @type='email' or @type='tel' or @type='url' or @type='search' or @type='number']"
-    ) as HTMLInputElement | null
+    // The element IS the input element for generic inputs
+    return this.element as HTMLInputElement
   }
 
   public get fieldName(): string {
-    // Try various ways to find the field name
     const input = this.inputElement()
     
     // Try label first
-    const labelText = super.fieldName
-    if (labelText) return labelText.trim()
+    const labelEl = this.labelElement
+    if (labelEl?.innerText) return labelEl.innerText.trim()
     
     // Try placeholder
     if (input?.placeholder) return input.placeholder
@@ -40,10 +43,26 @@ export class TextInput extends GenericBaseInput<string> {
     // Try aria-label
     if (input?.getAttribute('aria-label')) return input.getAttribute('aria-label')!
     
-    // Try name attribute
-    if (input?.name) return input.name
+    // Try title attribute
+    if (input?.title) return input.title
     
-    return 'Unknown Field'
+    // Try name attribute (clean it up)
+    if (input?.name) {
+      return input.name
+        .replace(/[_-]/g, ' ')
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .trim()
+    }
+    
+    // Try id attribute
+    if (input?.id) {
+      return input.id
+        .replace(/[_-]/g, ' ')
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .trim()
+    }
+    
+    return 'Text Field'
   }
 
   listenForChanges(): void {

@@ -1,29 +1,26 @@
 import fieldFillerQueue from '@src/shared/utils/fieldFillerQueue'
-import { getElement } from '@src/shared/utils/getElements'
 import { GenericBaseInput } from './GenericBaseInput'
 
 /**
  * Handles generic textarea fields on any website.
  */
 export class Textarea extends GenericBaseInput<string> {
-  static XPATH = [
-    ".//div[.//textarea]",
-    "[.//label or ./preceding-sibling::label or ./following-sibling::label or .//textarea[@placeholder]]",
-    "[not(ancestor::*[@job-app-filler])]",
-  ].join('')
+  // Directly target textarea elements
+  static XPATH = ".//textarea[not(@job-app-filler)]"
 
   fieldType = 'Textarea'
 
   inputElement(): HTMLTextAreaElement | null {
-    return getElement(this.element, './/textarea') as HTMLTextAreaElement | null
+    // The element IS the textarea element for generic inputs
+    return this.element as HTMLTextAreaElement
   }
 
   public get fieldName(): string {
     const textarea = this.inputElement()
     
     // Try label first
-    const labelText = super.fieldName
-    if (labelText) return labelText.trim()
+    const labelEl = this.labelElement
+    if (labelEl?.innerText) return labelEl.innerText.trim()
     
     // Try placeholder
     if (textarea?.placeholder) return textarea.placeholder
@@ -31,10 +28,18 @@ export class Textarea extends GenericBaseInput<string> {
     // Try aria-label
     if (textarea?.getAttribute('aria-label')) return textarea.getAttribute('aria-label')!
     
-    // Try name attribute
-    if (textarea?.name) return textarea.name
+    // Try title attribute
+    if (textarea?.title) return textarea.title
     
-    return 'Unknown Field'
+    // Try name attribute
+    if (textarea?.name) {
+      return textarea.name
+        .replace(/[_-]/g, ' ')
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .trim()
+    }
+    
+    return 'Text Area'
   }
 
   listenForChanges(): void {
