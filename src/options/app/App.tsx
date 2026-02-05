@@ -963,7 +963,13 @@ const CVAnalysisSection: FC = () => {
   }, [])
 
   const analyzeCV = async () => {
-    if (!cvData?.originalText) {
+    // Check if we have actual CV content (not just a placeholder)
+    const hasRealText = cvData?.originalText && 
+      !cvData.originalText.startsWith('[PDF') && 
+      !cvData.originalText.startsWith('[Word document')
+    const hasFile = cvData?.originalFile
+
+    if (!hasRealText && !hasFile) {
       setError('Please add your CV first in the CV/Resume tab')
       return
     }
@@ -979,7 +985,8 @@ const CVAnalysisSection: FC = () => {
       const response = await chrome.runtime.sendMessage({
         type: 'LLM_ANALYZE_CV',
         payload: {
-          cvText: cvData.originalText,
+          cvText: hasRealText ? cvData.originalText : undefined,
+          cvFile: hasFile ? cvData.originalFile : undefined,
           cvData: cvData.extractedData,
           jobContext,
         },

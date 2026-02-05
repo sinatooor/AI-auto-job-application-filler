@@ -1,6 +1,7 @@
 import { RegisterInputs as workday } from './app/services/formFields/workday'
 import { RegisterInputs as greenhouse } from './app/services/formFields/greenhouse'
 import { RegisterInputs as greenhouseReact } from './app/services/formFields/greenhouseReact'
+import { RegisterInputs as generic } from './app/services/formFields/generic'
 
 type InputSetup = (node: Node) => Promise<void>
 const inputRegistrars: [string, InputSetup][] = [
@@ -10,10 +11,13 @@ const inputRegistrars: [string, InputSetup][] = [
   ['boards.greenhouse.io', greenhouse],
   ['boards.eu.greenhouse.io', greenhouse],
 ]
+
 const getRegisterInput = (domain: string): InputSetup => {
-  return inputRegistrars.find((site) => {
+  const match = inputRegistrars.find((site) => {
     return domain.endsWith(site[0])
-  })[1]
+  })
+  // Return the specific handler if found, otherwise use the generic handler
+  return match ? match[1] : generic
 }
 
 const run = async () => {
@@ -45,9 +49,7 @@ if (!document.hidden) {
 // Listen for activate event from popup
 document.addEventListener('JAF_ACTIVATE', async () => {
   const RegisterInputs = getRegisterInput(window.location.host)
-  if (RegisterInputs) {
-    await RegisterInputs(document)
-  }
+  await RegisterInputs(document)
 })
 
 // Listen for auto-fill with AI event from popup

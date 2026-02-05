@@ -1,3 +1,4 @@
+import mammoth from 'mammoth'
 import { 
   AnalyzeCVPayload,
   CVAnalysisResult,
@@ -8,6 +9,43 @@ import {
   LLMSuggestFieldPayload 
 } from '@src/contentScript/utils/storage/LLMTypes'
 import { LocalStorageFile } from '@src/shared/utils/file'
+
+/**
+ * Check if a file is a Word document (.docx or .doc)
+ */
+function isWordDocument(file: LocalStorageFile): boolean {
+  const mimeType = file.type?.toLowerCase() || ''
+  const fileName = file.name?.toLowerCase() || ''
+  return (
+    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    mimeType === 'application/msword' ||
+    fileName.endsWith('.docx') ||
+    fileName.endsWith('.doc')
+  )
+}
+
+/**
+ * Extract text from a Word document using mammoth.
+ * Converts .docx files to plain text for processing by LLMs that don't support Word format.
+ */
+async function extractTextFromWordDocument(file: LocalStorageFile): Promise<string> {
+  // Decode base64 to get the raw bytes
+  const base64Data = file.body.split(',')[1]
+  const byteString = atob(base64Data)
+  const byteArray = new Uint8Array(byteString.length)
+  for (let i = 0; i < byteString.length; i++) {
+    byteArray[i] = byteString.charCodeAt(i)
+  }
+
+  // Use mammoth to extract text from the Word document
+  const result = await mammoth.extractRawText({ arrayBuffer: byteArray.buffer })
+  
+  if (!result.value || result.value.trim().length === 0) {
+    throw new Error('Could not extract text from Word document')
+  }
+
+  return result.value
+}
 
 interface LLMClientConfig {
   provider: LLMProvider
@@ -531,24 +569,34 @@ Be thorough and extract all available information. Parse dates into readable for
 
     // If we have a file, use provider-specific file handling
     if (file) {
-      switch (config.provider) {
-        case 'gemini': {
-          // Use inline base64 data for Gemini (simpler and more reliable)
-          response = await callGeminiWithInlineFile(config, file, systemPrompt, userPrompt)
-          break
+      // For Word documents, extract text first since most LLM APIs don't support .docx format directly
+      if (isWordDocument(file)) {
+        const extractedText = await extractTextFromWordDocument(file)
+        response = await callLLM(config, [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Parse this CV:\n\n${extractedText}` }
+        ])
+      } else {
+        // For PDFs and other supported formats, use provider-specific file handling
+        switch (config.provider) {
+          case 'gemini': {
+            // Use inline base64 data for Gemini (simpler and more reliable)
+            response = await callGeminiWithInlineFile(config, file, systemPrompt, userPrompt)
+            break
+          }
+          case 'openai': {
+            // Use OpenAI's file content type in chat completions
+            response = await callOpenAIWithFile(config, file, systemPrompt, userPrompt)
+            break
+          }
+          case 'anthropic': {
+            // Use Anthropic's document block for PDFs
+            response = await callAnthropicWithFile(config, file, systemPrompt, userPrompt)
+            break
+          }
+          default:
+            throw new Error(`Unknown provider: ${config.provider}`)
         }
-        case 'openai': {
-          // Use OpenAI's file content type in chat completions
-          response = await callOpenAIWithFile(config, file, systemPrompt, userPrompt)
-          break
-        }
-        case 'anthropic': {
-          // Use Anthropic's document block for PDFs
-          response = await callAnthropicWithFile(config, file, systemPrompt, userPrompt)
-          break
-        }
-        default:
-          throw new Error(`Unknown provider: ${config.provider}`)
       }
     } else if (cvText) {
       // Fallback to text-based processing
@@ -736,7 +784,31 @@ export async function analyzeCV(
   config: LLMClientConfig,
   payload: AnalyzeCVPayload
 ): Promise<LLMResponse<CVAnalysisResult>> {
-  const { cvText, cvData, jobContext } = payload
+  const { cvText, cvFile, cvData, jobContext } = payload
+
+  // Determine the CV text to use for analysis
+  let cvContentForAnalysis: string
+  
+  if (cvFile) {
+    // If a file is provided, extract text from it
+    if (isWordDocument(cvFile)) {
+      cvContentForAnalysis = await extractTextFromWordDocument(cvFile)
+    } else {
+      // For PDFs and other formats, we can't easily extract text in the background
+      // So we'll indicate that the file was provided but text extraction isn't supported
+      return {
+        success: false,
+        error: 'Please process your CV first to extract text, or upload a Word document (.docx)',
+      }
+    }
+  } else if (cvText) {
+    cvContentForAnalysis = cvText
+  } else {
+    return {
+      success: false,
+      error: 'No CV content provided for analysis',
+    }
+  }
 
   const systemPrompt = `You are an expert ATS (Applicant Tracking System) and career coach. Analyze the provided CV against the job description and provide detailed feedback.
 
@@ -804,7 +876,7 @@ Return ONLY valid JSON, no other text.`
   const userPrompt = `Analyze this CV against the job description:
 
 === CV TEXT ===
-${cvText}
+${cvContentForAnalysis}
 
 === JOB DETAILS ===
 Company: ${jobContext.company || 'Not specified'}

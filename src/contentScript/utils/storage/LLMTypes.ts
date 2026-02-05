@@ -227,7 +227,8 @@ export interface CVAnalysisResult {
 }
 
 export interface AnalyzeCVPayload {
-  cvText: string
+  cvText?: string
+  cvFile?: LocalStorageFile
   cvData?: ExtractedCVData
   jobContext: JobContext
 }

@@ -49,7 +49,7 @@ export const App: FC<{}> = () => {
         setSnackbarOpen(true)
       }
     } catch (err) {
-      setSnackbarMessage('Failed to activate. Make sure you\'re on a job application page.')
+      setSnackbarMessage('Failed to activate. Try refreshing the page first.')
       setSnackbarOpen(true)
     } finally {
       setActivating(false)
