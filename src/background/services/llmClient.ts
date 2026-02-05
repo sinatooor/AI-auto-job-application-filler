@@ -7,6 +7,9 @@ import {
   LLMResponse, 
   LLMSuggestFieldPayload 
 } from '@src/contentScript/utils/storage/LLMTypes'
+import { createLogger } from '@src/shared/utils/logger'
+
+const logger = createLogger('LLMClient')
 
 interface LLMClientConfig {
   provider: LLMProvider
@@ -21,31 +24,49 @@ interface ChatMessage {
 
 // OpenAI API client
 async function callOpenAI(config: LLMClientConfig, messages: ChatMessage[]): Promise<string> {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages,
-      temperature: 0.3,
-      max_tokens: 4096,
-    }),
-  })
+  logger.info('Calling OpenAI API...', { data: { model: config.model, messageCount: messages.length } })
+  logger.time('OpenAI API call')
+  
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages,
+        temperature: 0.3,
+        max_tokens: 4096,
+      }),
+    })
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.error?.message || `OpenAI API error: ${response.status}`)
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}))
+      logger.error('OpenAI API error', error, { data: { status: response.status } })
+      throw new Error(error.error?.message || `OpenAI API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const result = data.choices[0]?.message?.content || ''
+    
+    logger.timeEnd('OpenAI API call')
+    logger.success('OpenAI API response received', { data: { length: result.length } })
+    
+    return result
+  } catch (error) {
+    logger.timeEnd('OpenAI API call')
+    logger.error('OpenAI API call failed', error)
+    throw error
   }
-
-  const data = await response.json()
-  return data.choices[0]?.message?.content || ''
 }
 
 // Google Gemini API client
 async function callGemini(config: LLMClientConfig, messages: ChatMessage[]): Promise<string> {
+  logger.info('Calling Google Gemini API...', { data: { model: config.model, messageCount: messages.length } })
+  logger.time('Gemini API call')
+  
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`
   
   // Convert chat messages to Gemini format
@@ -62,22 +83,24 @@ async function callGemini(config: LLMClientConfig, messages: ChatMessage[]): Pro
     contents[0].parts[0].text = `${systemMessage.content}\n\n${contents[0].parts[0].text}`
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents,
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 4096,
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    }),
-  })
+      body: JSON.stringify({
+        contents,
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 4096,
+        },
+      }),
+    })
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}))
+      logger.error('Gemini API error', error, { data: { status: response.status } })
     throw new Error(error.error?.message || `Gemini API error: ${response.status}`)
   }
 

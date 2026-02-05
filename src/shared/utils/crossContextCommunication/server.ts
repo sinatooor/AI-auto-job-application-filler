@@ -1,4 +1,8 @@
 import { ServerCallback, RequestEvent } from '../types'
+import { createLogger } from '../logger'
+
+const logger = createLogger('Server')
+
 class NotFoundError extends Error {}
 
 /** Util func. */
@@ -45,6 +49,7 @@ export class Server {
   constructor(url: string) {
     this.url = url
     this.methods = {}
+    logger.info('Server initialized', { data: { url } })
     document.addEventListener(
       this.url,
       async (e: RequestEvent) => await this.handleRequest(e)
@@ -53,21 +58,30 @@ export class Server {
 
   private async handleRequest(e: RequestEvent) {
     const { requestId, methodName, data } = e.detail
+    logger.group(`📨 Server handling request: ${methodName}`, true)
+    logger.debug('Request details', { data: { requestId, methodName, hasData: !!data } })
+    logger.time(`Request ${methodName}`)
+    
     let result: any,
       ok: boolean = true
     try {
       result = await this.dispatch(methodName, data)
+      logger.success(`Request ${methodName} completed successfully`)
     } catch (err) {
       if (err instanceof NotFoundError) {
         result = { message: `method '${methodName}' not found` }
         ok = false
+        logger.error(`Method '${methodName}' not found`, err)
       } else {
         const { message, stack} = err
         result = { message, stack }
         ok = false
+        logger.error(`Request ${methodName} failed`, err)
       }
     }
 
+    logger.timeEnd(`Request ${methodName}`)
+    logger.groupEnd()
     this.sendResponse(requestId, ok, result)
   }
 
@@ -99,5 +113,6 @@ export class Server {
       throw new Error(`A method named ${methodName} already exists.`)
     }
     this.methods[methodName] = callback
+    logger.success(`Method registered: ${methodName}`)
   }
 }

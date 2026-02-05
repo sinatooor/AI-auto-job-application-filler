@@ -18,9 +18,8 @@
         "contentScript.js"
       ],
       "matches": [
-        "https://*.myworkdayjobs.com/*",
-        "https://*.myworkdaysite.com/*",
-        "https://*.greenhouse.io/*"
+        "https://*/*",
+        "http://*/*"
       ],
       "all_frames": true
     }
@@ -31,9 +30,8 @@
         "inject.js"
       ],
       "matches": [
-        "https://*.myworkdayjobs.com/*",
-        "https://*.myworkdaysite.com/*",
-        "https://*.greenhouse.io/*"
+        "https://*/*",
+        "http://*/*"
       ],
       "all_frames": true
     }

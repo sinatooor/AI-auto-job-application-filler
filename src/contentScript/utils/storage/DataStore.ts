@@ -1,6 +1,7 @@
 import elasticlunr from 'elasticlunr'
 import { NewAnswer, SavedAnswer } from './DataStoreTypes'
 import { Answer, FieldPath } from '@src/shared/utils/types'
+import { storageLogger as logger } from '@src/shared/utils/logger'
 
 export const convert106To1010 = (
   answer106: Answer
@@ -94,19 +95,29 @@ export class DataStore {
     id = id || this.autoIncrement++ // Increment the ID
     const existingMatch = this.findExisting(item)
     if (existingMatch) {
+      logger.debug('Found existing answer, returning it', { data: { id: existingMatch.id, fieldName: item.fieldName } })
       return existingMatch
     }
     const savedAnswer = { ...item, id }
     this.store.set(id, savedAnswer) // Store the item with the new ID
     this.exactMatchIndex.add(item.fieldName, id)
     this.ts_index.addDoc({ fieldName: item.fieldName, id })
+    logger.success('Answer added to store', { 
+      data: { 
+        id, 
+        fieldName: item.fieldName,
+        totalAnswers: this.store.size 
+      } 
+    })
     this.persist() // Persist the data to chrome.storage.local
     return savedAnswer // Return the assigned ID
   }
 
   // Method to retrieve an item by ID
   get(id: number): SavedAnswer {
-    return this.store.get(id)
+    const result = this.store.get(id)
+    logger.debug('Retrieved answer by ID', { data: { id, found: !!result } })
+    return result
   }
 
   // Method to remove an item by ID
@@ -119,9 +130,17 @@ export class DataStore {
       this.exactMatchIndex.delete(record.fieldName, id)
       this.ts_index.removeDoc({ fieldName: record.fieldName, id })
       this.store.delete(id)
+      logger.success('Answer deleted from store', { 
+        data: { 
+          id, 
+          fieldName: record.fieldName,
+          remainingAnswers: this.store.size 
+        } 
+      })
       this.persist()
       return true
     }
+    logger.warn('Answer not found for deletion', { data: { id } })
     return false
   }
 
@@ -134,6 +153,7 @@ export class DataStore {
       this.delete(old.id)
     }
     this.add(item, item.id)
+    logger.success('Answer updated in store', { data: { id: item.id, fieldName: item.fieldName } })
     return item
   }
 
@@ -151,11 +171,21 @@ export class DataStore {
       store: Array.from(this.store.entries()), // Convert Map to array for storage
       autoIncrement: this.autoIncrement,
     }
-    chrome.storage.local.set({ [this.name]: data })
+    logger.debug('Persisting data to chrome storage', { 
+      data: { 
+        storeName: this.name, 
+        itemCount: this.store.size,
+        autoIncrement: this.autoIncrement 
+      } 
+    })
+    await chrome.storage.local.set({ [this.name]: data })
   }
 
   // Load the store and current ID from chrome.storage.local
   async load() {
+    logger.info(`Loading data store: ${this.name}`)
+    logger.time(`Load ${this.name}`)
+    
     const result = await chrome.storage.local.get(this.name)
     if (result[this.name]) {
       const { store, autoIncrement } = result[this.name]
@@ -165,12 +195,22 @@ export class DataStore {
         this.exactMatchIndex.add(fieldName, id)
         this.ts_index.addDoc({ fieldName, id })
       })
+      logger.success(`Loaded ${this.store.size} items from storage`)
+    } else {
+      logger.info('No existing data found, starting fresh')
     }
     this.loaded = true
+    logger.timeEnd(`Load ${this.name}`)
   }
 
   exactSearch(fieldName: string): SavedAnswer[] {
     const matchingIds = this.exactMatchIndex.get(fieldName)
+    logger.debug('Exact match search', { 
+      data: { 
+        fieldName, 
+        matchCount: matchingIds.length 
+      } 
+    })
     return matchingIds.map((id: number) => {
       return { ...this.get(id), matchType: 'exact' }
     })
@@ -178,6 +218,13 @@ export class DataStore {
 
   tsSearch(fieldName: string): SavedAnswer[] {
     const results = this.ts_index.search(fieldName, {})
+    logger.debug('Text search', { 
+      data: { 
+        fieldName, 
+        matchCount: results.length,
+        topScore: results[0]?.score 
+      } 
+    })
     return results.map(({ ref, score }) => {
       return { ...this.get(parseInt(ref)), matchType: `Similar: ${score}` }
     })
@@ -193,18 +240,37 @@ export class DataStore {
   }
 
   search({ fieldName, section, fieldType }: FieldPath): SavedAnswer[] {
+    logger.group(`🔍 Searching for answer`, true)
+    logger.debug('Search criteria', { data: { fieldName, section, fieldType } })
+    logger.time('Answer search')
+    
     const limit = 10
     // get matches
     const exactMatches = this.exactSearch(fieldName)
     const tsMatches = this.tsSearch(fieldName)
+    
     // combine matches
     const results = []
     this.pushResults(results, exactMatches)
     this.pushResults(results, tsMatches)
+    
+    logger.debug(`Combined ${results.length} total matches`)
+    
     // filter matches
     const filteredResults = results.filter((answer: SavedAnswer) => {
       return answer.fieldType === fieldType && answer.section === section
     })
+    
+    logger.timeEnd('Answer search')
+    logger.success(`Found ${filteredResults.length} matching answer(s)`, { 
+      data: { 
+        exactMatches: exactMatches.length,
+        similarMatches: tsMatches.length,
+        afterFilter: filteredResults.length 
+      } 
+    })
+    logger.groupEnd()
+    
     return filteredResults.slice(0, limit)
   }
 }
