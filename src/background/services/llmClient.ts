@@ -45,9 +45,9 @@ async function uploadFileToGemini(
     byteArray[i] = byteString.charCodeAt(i)
   }
 
-  // Gemini Files API upload endpoint (v1beta)
+  // Gemini Files API upload endpoint
   const uploadUrl =
-    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${encodeURIComponent(apiKey)}`
+    `https://generativelanguage.googleapis.com/v1beta/files?key=${encodeURIComponent(apiKey)}`
 
   // Multipart upload with JSON metadata + raw bytes
   const boundary = '----gemini-boundary-' + Math.random().toString(16).slice(2)
@@ -62,7 +62,8 @@ async function uploadFileToGemini(
 
   const fileHeaderPart =
     `--${boundary}\r\n` +
-    `Content-Type: ${mimeType}\r\n\r\n`
+    `Content-Type: ${mimeType}\r\n` +
+    `Content-Disposition: form-data; name="file"; filename="${name}"\r\n\r\n`
 
   const closingPart = `\r\n--${boundary}--\r\n`
 
@@ -112,7 +113,60 @@ async function uploadFileToGemini(
 }
 
 /**
+ * Calls Gemini API with inline base64 file data for content generation.
+ * This is simpler than using Files API and works well for CV-sized documents.
+ */
+async function callGeminiWithInlineFile(
+  config: LLMClientConfig,
+  file: LocalStorageFile,
+  systemPrompt: string,
+  userPrompt: string
+): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`
+  
+  // Extract base64 data from the DataURL
+  const base64Data = file.body.split(',')[1]
+  const mimeType = file.type || 'application/pdf'
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { 
+              inlineData: { 
+                mimeType: mimeType, 
+                data: base64Data 
+              } 
+            },
+            { text: `${systemPrompt}\n\n${userPrompt}` },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 8192,
+      },
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error?.message || `Gemini API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+}
+
+/**
  * Calls Gemini API with an uploaded file reference for content generation.
+ * Used when file was uploaded via Files API.
  */
 async function callGeminiWithFile(
   config: LLMClientConfig,
@@ -475,13 +529,12 @@ Be thorough and extract all available information. Parse dates into readable for
   try {
     let response: string
 
-    // If we have a file, use provider-specific file upload
+    // If we have a file, use provider-specific file handling
     if (file) {
       switch (config.provider) {
         case 'gemini': {
-          // Upload the file to Gemini Files API
-          const uploadedFile = await uploadFileToGemini(config.apiKey, file)
-          response = await callGeminiWithFile(config, uploadedFile, systemPrompt, userPrompt)
+          // Use inline base64 data for Gemini (simpler and more reliable)
+          response = await callGeminiWithInlineFile(config, file, systemPrompt, userPrompt)
           break
         }
         case 'openai': {
