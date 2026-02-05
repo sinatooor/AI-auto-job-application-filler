@@ -70,9 +70,11 @@ import {
 import { fileToLocalStorage, LocalStorageFile } from '@src/shared/utils/file'
 import { answers1010 } from '@src/contentScript/utils/storage/Answers1010'
 import { SavedAnswer } from '@src/contentScript/utils/storage/DataStoreTypes'
+import { saveCVDataToDatabase } from '@src/contentScript/utils/storage/cvToAnswers'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import DeleteIcon from '@mui/icons-material/Delete'
+import StorageIcon from '@mui/icons-material/Storage'
 import AddIcon from '@mui/icons-material/Add'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import DownloadIcon from '@mui/icons-material/Download'
@@ -311,6 +313,8 @@ const CVSection: FC = () => {
   const [cvData, setCvDataState] = useState<CVData | null>(null)
   const [cvText, setCvText] = useState('')
   const [processing, setProcessing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveResult, setSaveResult] = useState<{ added: number; skipped: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -327,13 +331,22 @@ const CVSection: FC = () => {
     if (!file) return
 
     try {
-      // Read file content
-      const text = await file.text()
       const localFile = await fileToLocalStorage(file)
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
       
-      setCvText(text)
-      await setCVData({ originalText: text, originalFile: localFile })
-      setCvDataState((prev) => ({ ...prev, originalText: text, originalFile: localFile }))
+      if (isPdf) {
+        // For PDFs, don't try to read as text - just store the file
+        // The file will be sent directly to Gemini for processing
+        setCvText('[PDF file uploaded - will be processed directly by AI]')
+        await setCVData({ originalFile: localFile })
+        setCvDataState((prev) => ({ ...prev, originalFile: localFile, originalText: undefined }))
+      } else {
+        // For text files (.txt, .docx), read the content
+        const text = await file.text()
+        setCvText(text)
+        await setCVData({ originalText: text, originalFile: localFile })
+        setCvDataState((prev) => ({ ...prev, originalText: text, originalFile: localFile }))
+      }
     } catch (err) {
       setError('Failed to read file')
     }
@@ -350,7 +363,10 @@ const CVSection: FC = () => {
   }
 
   const processCV = async () => {
-    if (!cvText.trim()) {
+    const hasFile = cvData?.originalFile
+    const hasText = cvText.trim() && !cvText.startsWith('[PDF file uploaded')
+    
+    if (!hasFile && !hasText) {
       setError('Please enter or upload your CV first')
       return
     }
@@ -361,7 +377,10 @@ const CVSection: FC = () => {
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'LLM_PROCESS_CV',
-        payload: { text: cvText },
+        payload: { 
+          text: hasText ? cvText : undefined,
+          file: hasFile ? cvData.originalFile : undefined
+        },
       })
 
       if (response.success) {
@@ -377,10 +396,31 @@ const CVSection: FC = () => {
     setProcessing(false)
   }
 
+  const saveToDatabase = async () => {
+    if (!cvData?.extractedData) {
+      setError('No extracted data to save. Please process your CV first.')
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    setSaveResult(null)
+
+    try {
+      const result = await saveCVDataToDatabase(cvData.extractedData, answers1010)
+      setSaveResult(result)
+    } catch (err) {
+      setError('Failed to save to database. Please try again.')
+    }
+
+    setSaving(false)
+  }
+
   const clearCV = async () => {
     await clearCVData()
     setCvDataState(null)
     setCvText('')
+    setSaveResult(null)
   }
 
   return (
@@ -421,13 +461,20 @@ const CVSection: FC = () => {
         value={cvText}
         onChange={handleTextChange}
         onBlur={handleSaveText}
+        disabled={cvText.startsWith('[PDF file uploaded')}
       />
+
+      {cvData?.originalFile?.type === 'application/pdf' && (
+        <Typography variant="body2" color="info.main">
+          PDF files are processed directly by Gemini AI for best results.
+        </Typography>
+      )}
 
       <Stack direction="row" spacing={2}>
         <Button
           variant="contained"
           onClick={processCV}
-          disabled={processing || !cvText.trim()}
+          disabled={processing || (!cvText.trim() && !cvData?.originalFile)}
         >
           {processing ? <CircularProgress size={20} /> : 'Process CV with AI'}
         </Button>
@@ -445,6 +492,32 @@ const CVSection: FC = () => {
               Extracted Information
             </Typography>
             <ExtractedDataDisplay data={cvData.extractedData} />
+            
+            <Divider sx={{ my: 2 }} />
+            
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <StorageIcon />}
+                onClick={saveToDatabase}
+                disabled={saving}
+              >
+                {saving ? 'Saving...' : 'Save to Database'}
+              </Button>
+              
+              {saveResult && (
+                <Alert severity="success" sx={{ py: 0, flexGrow: 1 }}>
+                  Added {saveResult.added} field mappings to the database. 
+                  Your CV data is now available for form auto-filling!
+                </Alert>
+              )}
+            </Stack>
+            
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              This will save your extracted CV data as answers in the database. 
+              The extension will use these to automatically fill matching form fields.
+            </Typography>
           </CardContent>
         </Card>
       )}

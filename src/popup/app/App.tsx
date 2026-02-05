@@ -3,6 +3,7 @@ import './popup.css'
 import {
   Box,
   Button,
+  CircularProgress,
   Container,
   Divider,
   IconButton,
@@ -19,6 +20,8 @@ import { ContentCopyIcon, GitHubIcon, OpenInNewIcon } from '@src/shared/utils/ic
 import { LogoTitleBar } from '@src/shared/components/LogoTitleBar'
 import { Tracker } from './Tracker'
 import HistoryIcon from '@mui/icons-material/History'
+import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 
 const EMAIL_ADDRESS = 'berellevy+chromeextensions@gmail.com'
 
@@ -26,12 +29,52 @@ export const App: FC<{}> = () => {
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false)
   const [snackbarMessage, setSnackbarMessage] = useState<string>('')
   const [view, setView] = useState<'home' | 'tracker'>('home')
+  const [activating, setActivating] = useState<boolean>(false)
+  const [autoFilling, setAutoFilling] = useState<boolean>(false)
 
   const handleCloseSnackbar = (
     event: React.SyntheticEvent | Event,
     reason?: SnackbarCloseReason
   ) => {
     setSnackbarOpen(false)
+  }
+
+  const handleActivate = async () => {
+    setActivating(true)
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+      if (tabs[0]?.id) {
+        await chrome.tabs.sendMessage(tabs[0].id, { type: 'ACTIVATE_EXTENSION' })
+        setSnackbarMessage('Extension activated! Form fields detected.')
+        setSnackbarOpen(true)
+      }
+    } catch (err) {
+      setSnackbarMessage('Failed to activate. Make sure you\'re on a job application page.')
+      setSnackbarOpen(true)
+    } finally {
+      setActivating(false)
+    }
+  }
+
+  const handleAutoFillWithAI = async () => {
+    setAutoFilling(true)
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+      if (tabs[0]?.id) {
+        const response = await chrome.tabs.sendMessage(tabs[0].id, { type: 'AUTO_FILL_WITH_AI' })
+        if (response?.success) {
+          setSnackbarMessage(`AI filled ${response.filledCount || 0} field(s) successfully!`)
+        } else {
+          setSnackbarMessage(response?.error || 'AI auto-fill completed.')
+        }
+        setSnackbarOpen(true)
+      }
+    } catch (err) {
+      setSnackbarMessage('Failed to auto-fill. Make sure AI is configured in settings.')
+      setSnackbarOpen(true)
+    } finally {
+      setAutoFilling(false)
+    }
   }
 
   return (
@@ -48,6 +91,33 @@ export const App: FC<{}> = () => {
               <Typography variant="h6" sx={{ mb: 1 }}>
                 The Best Autofill Since Sliced Bread.
               </Typography>
+              
+              {/* Primary Action Buttons */}
+              <Stack spacing={1} sx={{ mb: 2 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  startIcon={activating ? <CircularProgress size={18} color="inherit" /> : <PlayArrowIcon />}
+                  onClick={handleActivate}
+                  disabled={activating}
+                >
+                  {activating ? 'Activating...' : 'Activate'}
+                </Button>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  fullWidth
+                  startIcon={autoFilling ? <CircularProgress size={18} color="inherit" /> : <AutoAwesomeIcon />}
+                  onClick={handleAutoFillWithAI}
+                  disabled={autoFilling}
+                >
+                  {autoFilling ? 'Filling...' : 'Auto Fill with AI'}
+                </Button>
+              </Stack>
+
+              <Divider sx={{ my: 1 }} />
+              
               <Stack direction={'row'} spacing={1}>
                 <Button
                   variant="outlined"

@@ -9,7 +9,6 @@ import { App } from '../../App'
 import { SaveButtonClickHndler, saveButtonClickHandlers } from '../../hooks/saveButtonClickHandlers'
 import { EditableAnswer, useEditableAnswerState } from '../../hooks/useEditableAnswerState'
 import { contentScriptAPI } from '../contentScriptApi'
-import { formFieldLogger as logger } from '@src/shared/utils/logger'
 
 export type AnswerValueMethods = {
   displayComponent: FC<{ id: number }>
@@ -83,49 +82,21 @@ export abstract class BaseFormInput<AnswerType> {
     this.element = element
     this.uuid = uuid4()
     this.reactMessageEventId = `reactMessage-${this.uuid}`
-    
-    logger.debug('Registering form field', { 
-      data: { 
-        uuid: this.uuid,
-        fieldType: this.constructor.name,
-        element: element.tagName 
-      } 
-    })
-    
     /** prevents the element from being registered twice */
     this.element.setAttribute('job-app-filler', this.uuid)
     this.listenForChanges()
     this.attachReactApp(<App backend={this} />, element)
-    
-    logger.success(`Form field registered: ${this.constructor.name}`, { 
-      data: { 
-        fieldName: this.fieldName,
-        section: this.section,
-        page: this.page
-      } 
-    })
   }
 
   static async autoDiscover(node: Node = document) {
-    logger.debug(`AutoDiscovering ${this.name} fields...`, { data: { xpath: (this as any).XPATH } })
-    const elements = getElements(node, (this as any).XPATH)
-    
-    logger.info(`Found ${elements.length} potential ${this.name} field(s)`)
-    
-    let registered = 0
+    const elements = getElements(node, this.XPATH)
     elements.forEach((el) => {
       if (isRegistered(el)) {
-        logger.debug(`Skipping already registered field`)
         return
       }
-      // @ts-ignore
-      new this(el)
-      registered++
+        // @ts-ignore
+        new this(el)
     })
-    
-    if (registered > 0) {
-      logger.success(`Registered ${registered} new ${this.name} field(s)`)
-    }
   }
 
   /**
@@ -196,33 +167,22 @@ export abstract class BaseFormInput<AnswerType> {
   }
 
   async save(answer: Answer): Promise<Answer> {
-    logger.info('Saving answer', { data: { fieldName: answer.path.fieldName, fieldType: answer.path.fieldType } })
     const response = await contentScriptAPI.send('saveAnswer', answer)
-    logger.success('Answer saved successfully', { data: { id: response.data?.id } })
     return response.data
   }
 
   async deleteAnswer(id: number): Promise<boolean> {
-    logger.info('Deleting answer', { data: { id } })
     const res = await contentScriptAPI.send('deleteAnswer', id)
-    const success = res.ok
-    if (success) {
-      logger.success('Answer deleted')
-    } else {
-      logger.error('Failed to delete answer')
-    }
-    return success
+    return res.ok
   }
 
   async answer(path?: FieldPath): Promise<Answer[]> {
     path = path || this.path
-    logger.debug('Fetching answers', { data: { path } })
     const res = await contentScriptAPI.send('getAnswer', path)
     if (res.ok) {
-      logger.info(`Found ${res.data.length} answer(s)`)
       return res.data
     } else {
-      logger.warn('No answers found', { data: { path, response: res } })
+      console.log(res, this.path)
       return []
     }
   }
@@ -230,24 +190,14 @@ export abstract class BaseFormInput<AnswerType> {
   public clickIsInFormfield(e: PointerEvent) {
     return e.composedPath().includes(this.element)
   }
-logger.info('Filling field with AI-suggested value', { 
-      data: { 
-        fieldName: this.fieldName,
-        value: typeof value === 'string' ? value.substring(0, 50) : value 
-      } 
-    })
-    
-    // Default implementation: store the value as an answer and then fill
-    // This works for most field types
-    const answer: Answer = {
-      path: this.path,
-      answer: value,
-    }
-    
-    await contentScriptAPI.send('addAnswer', answer)
-    await this.fill()
-    
-    logger.success('Field filled with AI value'ic implementation that works for text inputs.
+
+  public isFilled(current: any, stored: any[]): boolean {
+    return stored.some((answer) => stringMatch.exact(current, answer))
+  }
+
+  /**
+   * Fill the field with an AI-suggested value.
+   * This is a generic implementation that works for text inputs.
    * Subclasses may need to override this for more complex field types.
    */
   async fillWithValue(value: any): Promise<void> {

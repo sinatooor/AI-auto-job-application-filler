@@ -8,9 +8,6 @@ import { ContextProvider } from './AppContext'
 import { BaseFormInput } from './services/formFields/baseFormInput'
 import { FieldWidgetButtons } from './FieldWidget/FieldWidgetButtons'
 import Logo from '@src/shared/components/Logo'
-import { createLogger } from '@src/shared/utils/logger'
-
-const logger = createLogger('UIApp')
 
 const Main: FC = () => {
   return (
@@ -43,18 +40,10 @@ export const attachReactApp = (
   app: React.ReactNode,
   inputContainer: HTMLElement
 ) => {
-  logger.debug('Attaching React app to form field', { 
-    data: { 
-      containerTagName: inputContainer.tagName,
-      containerHasChildren: inputContainer.children.length > 0 
-    } 
-  })
-  
   // cant just append the react app to the root element...
   // it makes the element disappear
   const rootElement = document.createElement('div')
+  rootElement.setAttribute('data-jaf-field', 'true')
   inputContainer.insertBefore(rootElement, inputContainer.lastChild)
   createRoot(rootElement).render(app)
-  
-  logger.success('React app mounted successfully')
 }

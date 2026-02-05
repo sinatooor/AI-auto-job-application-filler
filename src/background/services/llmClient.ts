@@ -7,9 +7,7 @@ import {
   LLMResponse, 
   LLMSuggestFieldPayload 
 } from '@src/contentScript/utils/storage/LLMTypes'
-import { createLogger } from '@src/shared/utils/logger'
-
-const logger = createLogger('LLMClient')
+import { LocalStorageFile } from '@src/shared/utils/file'
 
 interface LLMClientConfig {
   provider: LLMProvider
@@ -22,51 +20,166 @@ interface ChatMessage {
   content: string
 }
 
+interface GeminiUploadedFile {
+  fileUri: string
+  mimeType: string
+}
+
+/**
+ * Uploads a file to Gemini Files API and returns { fileUri, mimeType }.
+ * Uses the documented files:upload endpoint for multipart upload.
+ */
+async function uploadFileToGemini(
+  apiKey: string,
+  file: LocalStorageFile
+): Promise<GeminiUploadedFile> {
+  const { name, type, body } = file
+  const mimeType = type || 'application/pdf'
+
+  // Decode base64 to get the raw bytes
+  // The body is a DataURL: "data:application/pdf;base64,..."
+  const base64Data = body.split(',')[1]
+  const byteString = atob(base64Data)
+  const byteArray = new Uint8Array(byteString.length)
+  for (let i = 0; i < byteString.length; i++) {
+    byteArray[i] = byteString.charCodeAt(i)
+  }
+
+  // Gemini Files API upload endpoint (v1beta)
+  const uploadUrl =
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${encodeURIComponent(apiKey)}`
+
+  // Multipart upload with JSON metadata + raw bytes
+  const boundary = '----gemini-boundary-' + Math.random().toString(16).slice(2)
+
+  const metadataPart =
+    `--${boundary}\r\n` +
+    `Content-Type: application/json; charset=utf-8\r\n\r\n` +
+    JSON.stringify({
+      file: { display_name: name },
+    }) +
+    `\r\n`
+
+  const fileHeaderPart =
+    `--${boundary}\r\n` +
+    `Content-Type: ${mimeType}\r\n\r\n`
+
+  const closingPart = `\r\n--${boundary}--\r\n`
+
+  // Combine all parts into a single ArrayBuffer
+  const encoder = new TextEncoder()
+  const metadataBytes = encoder.encode(metadataPart)
+  const fileHeaderBytes = encoder.encode(fileHeaderPart)
+  const closingBytes = encoder.encode(closingPart)
+
+  const totalLength = metadataBytes.length + fileHeaderBytes.length + byteArray.length + closingBytes.length
+  const bodyBuffer = new Uint8Array(totalLength)
+  
+  let offset = 0
+  bodyBuffer.set(metadataBytes, offset)
+  offset += metadataBytes.length
+  bodyBuffer.set(fileHeaderBytes, offset)
+  offset += fileHeaderBytes.length
+  bodyBuffer.set(byteArray, offset)
+  offset += byteArray.length
+  bodyBuffer.set(closingBytes, offset)
+
+  const response = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': `multipart/related; boundary=${boundary}`,
+    },
+    body: bodyBuffer,
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`Gemini file upload failed (${response.status}): ${text}`)
+  }
+
+  const json = await response.json()
+
+  // The response contains the uploaded file resource
+  // Typical shape: { file: { uri: "files/...", mimeType: "...", ... } }
+  const uploadedFile = json.file ?? json
+  const fileUri = uploadedFile.uri || uploadedFile.name
+
+  if (!fileUri) {
+    throw new Error('Gemini file upload succeeded but file URI not found in response')
+  }
+
+  return { fileUri, mimeType }
+}
+
+/**
+ * Calls Gemini API with an uploaded file reference for content generation.
+ */
+async function callGeminiWithFile(
+  config: LLMClientConfig,
+  uploadedFile: GeminiUploadedFile,
+  systemPrompt: string,
+  userPrompt: string
+): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { fileData: { mimeType: uploadedFile.mimeType, fileUri: uploadedFile.fileUri } },
+            { text: `${systemPrompt}\n\n${userPrompt}` },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 8192,
+      },
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error?.message || `Gemini API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+}
+
 // OpenAI API client
 async function callOpenAI(config: LLMClientConfig, messages: ChatMessage[]): Promise<string> {
-  logger.info('Calling OpenAI API...', { data: { model: config.model, messageCount: messages.length } })
-  logger.time('OpenAI API call')
-  
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages,
-        temperature: 0.3,
-        max_tokens: 4096,
-      }),
-    })
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: config.model,
+      messages,
+      temperature: 0.3,
+      max_tokens: 4096,
+    }),
+  })
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}))
-      logger.error('OpenAI API error', error, { data: { status: response.status } })
-      throw new Error(error.error?.message || `OpenAI API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    const result = data.choices[0]?.message?.content || ''
-    
-    logger.timeEnd('OpenAI API call')
-    logger.success('OpenAI API response received', { data: { length: result.length } })
-    
-    return result
-  } catch (error) {
-    logger.timeEnd('OpenAI API call')
-    logger.error('OpenAI API call failed', error)
-    throw error
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error?.message || `OpenAI API error: ${response.status}`)
   }
+
+  const data = await response.json()
+  return data.choices[0]?.message?.content || ''
 }
 
 // Google Gemini API client
 async function callGemini(config: LLMClientConfig, messages: ChatMessage[]): Promise<string> {
-  logger.info('Calling Google Gemini API...', { data: { model: config.model, messageCount: messages.length } })
-  logger.time('Gemini API call')
-  
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`
   
   // Convert chat messages to Gemini format
@@ -83,24 +196,22 @@ async function callGemini(config: LLMClientConfig, messages: ChatMessage[]): Pro
     contents[0].parts[0].text = `${systemMessage.content}\n\n${contents[0].parts[0].text}`
   }
 
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents,
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 4096,
       },
-      body: JSON.stringify({
-        contents,
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 4096,
-        },
-      }),
-    })
+    }),
+  })
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}))
-      logger.error('Gemini API error', error, { data: { status: response.status } })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
     throw new Error(error.error?.message || `Gemini API error: ${response.status}`)
   }
 
@@ -177,8 +288,13 @@ export async function testConnection(config: LLMClientConfig): Promise<LLMRespon
 }
 
 // Process CV and extract structured data
-export async function processCV(config: LLMClientConfig, cvText: string): Promise<LLMResponse<ExtractedCVData>> {
-  const systemPrompt = `You are an expert CV/Resume parser. Extract structured information from the provided CV text.
+// When a file is provided and the provider is Gemini, the file is uploaded directly to Gemini's Files API
+export async function processCV(
+  config: LLMClientConfig,
+  cvText?: string,
+  file?: LocalStorageFile
+): Promise<LLMResponse<ExtractedCVData>> {
+  const systemPrompt = `You are an expert CV/Resume parser. Extract structured information from the provided CV/Resume.
 Return ONLY valid JSON matching this exact structure (omit fields that are not present):
 
 {
@@ -239,10 +355,29 @@ Return ONLY valid JSON matching this exact structure (omit fields that are not p
 Be thorough and extract all available information. Parse dates into readable formats. Return ONLY the JSON, no other text.`
 
   try {
-    const response = await callLLM(config, [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Parse this CV:\n\n${cvText}` }
-    ])
+    let response: string
+
+    // If we have a file and the provider is Gemini, use the Files API for direct file processing
+    if (file && config.provider === 'gemini') {
+      // Upload the file to Gemini Files API
+      const uploadedFile = await uploadFileToGemini(config.apiKey, file)
+      
+      // Call Gemini with the uploaded file reference
+      response = await callGeminiWithFile(
+        config,
+        uploadedFile,
+        systemPrompt,
+        'Parse this CV/Resume document and extract all information.'
+      )
+    } else if (cvText) {
+      // Fallback to text-based processing
+      response = await callLLM(config, [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Parse this CV:\n\n${cvText}` }
+      ])
+    } else {
+      return { success: false, error: 'No CV text or file provided' }
+    }
 
     // Extract JSON from response
     const jsonMatch = response.match(/\{[\s\S]*\}/)
