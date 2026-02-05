@@ -332,16 +332,22 @@ const CVSection: FC = () => {
 
     try {
       const localFile = await fileToLocalStorage(file)
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+      const fileName = file.name.toLowerCase()
+      const isPdf = file.type === 'application/pdf' || fileName.endsWith('.pdf')
+      const isWord = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                     file.type === 'application/msword' ||
+                     fileName.endsWith('.docx') ||
+                     fileName.endsWith('.doc')
       
-      if (isPdf) {
-        // For PDFs, don't try to read as text - just store the file
-        // The file will be sent directly to Gemini for processing
-        setCvText('[PDF file uploaded - will be processed directly by AI]')
+      if (isPdf || isWord) {
+        // For PDFs and Word docs, don't try to read as text - just store the file
+        // The file will be sent directly to the AI for processing
+        const fileType = isPdf ? 'PDF' : 'Word document'
+        setCvText(`[${fileType} uploaded - will be processed directly by AI]`)
         await setCVData({ originalFile: localFile })
         setCvDataState((prev) => ({ ...prev, originalFile: localFile, originalText: undefined }))
       } else {
-        // For text files (.txt, .docx), read the content
+        // For text files (.txt), read the content
         const text = await file.text()
         setCvText(text)
         await setCVData({ originalText: text, originalFile: localFile })
@@ -364,7 +370,7 @@ const CVSection: FC = () => {
 
   const processCV = async () => {
     const hasFile = cvData?.originalFile
-    const hasText = cvText.trim() && !cvText.startsWith('[PDF file uploaded')
+    const hasText = cvText.trim() && !cvText.startsWith('[PDF file uploaded') && !cvText.startsWith('[Word document uploaded')
     
     if (!hasFile && !hasText) {
       setError('Please enter or upload your CV first')
@@ -461,12 +467,14 @@ const CVSection: FC = () => {
         value={cvText}
         onChange={handleTextChange}
         onBlur={handleSaveText}
-        disabled={cvText.startsWith('[PDF file uploaded')}
+        disabled={cvText.startsWith('[PDF file uploaded') || cvText.startsWith('[Word document uploaded')}
       />
 
-      {cvData?.originalFile?.type === 'application/pdf' && (
+      {cvData?.originalFile && (cvData.originalFile.type === 'application/pdf' || 
+        cvData.originalFile.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        cvData.originalFile.type === 'application/msword') && (
         <Typography variant="body2" color="info.main">
-          PDF files are sent directly to the AI for processing - no text extraction needed.
+          File will be sent directly to the AI for processing - no text extraction needed.
         </Typography>
       )}
 
