@@ -1,5 +1,8 @@
 import {
+  CoverLetterData,
+  CoverLetterStore,
   CVData,
+  DEFAULT_COVER_LETTER_STORE,
   DEFAULT_CV_DATA,
   DEFAULT_JOB_CONTEXT_STORE,
   DEFAULT_LLM_SETTINGS,
@@ -12,6 +15,7 @@ const STORAGE_KEYS = {
   LLM_SETTINGS: 'llm_settings',
   CV_DATA: 'cv_data',
   JOB_CONTEXTS: 'job_contexts',
+  COVER_LETTERS: 'cover_letters',
 }
 
 // LLM Settings
@@ -101,4 +105,55 @@ export async function setActiveJobContext(id: string): Promise<void> {
 export async function getActiveJobContext(): Promise<JobContext | undefined> {
   const store = await getJobContextStore()
   return store.contexts.find((c) => c.id === store.activeContextId)
+}
+
+// Cover Letters
+export async function getCoverLetterStore(): Promise<CoverLetterStore> {
+  const result = await chrome.storage.local.get(STORAGE_KEYS.COVER_LETTERS)
+  return result[STORAGE_KEYS.COVER_LETTERS] || DEFAULT_COVER_LETTER_STORE
+}
+
+export async function saveCoverLetter(letter: Omit<CoverLetterData, 'generatedAt'>): Promise<CoverLetterData> {
+  const store = await getCoverLetterStore()
+  const newLetter: CoverLetterData = {
+    ...letter,
+    generatedAt: Date.now(),
+  }
+  store.letters.push(newLetter)
+  store.activeLetterId = store.letters.length - 1
+  await chrome.storage.local.set({ [STORAGE_KEYS.COVER_LETTERS]: store })
+  return newLetter
+}
+
+export async function getActiveCoverLetter(): Promise<CoverLetterData | undefined> {
+  const store = await getCoverLetterStore()
+  if (store.activeLetterId !== undefined && store.letters[store.activeLetterId]) {
+    return store.letters[store.activeLetterId]
+  }
+  return store.letters[store.letters.length - 1]
+}
+
+export async function updateCoverLetter(index: number, updates: Partial<CoverLetterData>): Promise<void> {
+  const store = await getCoverLetterStore()
+  if (store.letters[index]) {
+    store.letters[index] = { ...store.letters[index], ...updates }
+    await chrome.storage.local.set({ [STORAGE_KEYS.COVER_LETTERS]: store })
+  }
+}
+
+export async function deleteCoverLetter(index: number): Promise<void> {
+  const store = await getCoverLetterStore()
+  store.letters.splice(index, 1)
+  if (store.activeLetterId === index) {
+    store.activeLetterId = store.letters.length > 0 ? store.letters.length - 1 : undefined
+  }
+  await chrome.storage.local.set({ [STORAGE_KEYS.COVER_LETTERS]: store })
+}
+
+export async function setActiveCoverLetter(index: number): Promise<void> {
+  const store = await getCoverLetterStore()
+  if (store.letters[index]) {
+    store.activeLetterId = index
+    await chrome.storage.local.set({ [STORAGE_KEYS.COVER_LETTERS]: store })
+  }
 }

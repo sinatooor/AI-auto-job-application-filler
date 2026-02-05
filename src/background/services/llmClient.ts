@@ -1,4 +1,12 @@
-import { ExtractedCVData, LLMProvider, LLMResponse, LLMSuggestFieldPayload } from '@src/contentScript/utils/storage/LLMTypes'
+import { 
+  AnalyzeCVPayload,
+  CVAnalysisResult,
+  ExtractedCVData, 
+  GenerateCoverLetterPayload, 
+  LLMProvider, 
+  LLMResponse, 
+  LLMSuggestFieldPayload 
+} from '@src/contentScript/utils/storage/LLMTypes'
 
 interface LLMClientConfig {
   provider: LLMProvider
@@ -295,6 +303,197 @@ Provide ONLY the suggested value:`
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get suggestion',
+    }
+  }
+}
+
+// Generate cover letter
+export async function generateCoverLetter(
+  config: LLMClientConfig,
+  payload: GenerateCoverLetterPayload
+): Promise<LLMResponse<string>> {
+  const { cvData, jobContext, tone = 'professional', length = 'medium', customInstructions } = payload
+
+  const lengthGuide = {
+    short: '200-300 words, 2-3 paragraphs',
+    medium: '300-450 words, 3-4 paragraphs',
+    long: '450-600 words, 4-5 paragraphs'
+  }
+
+  const toneGuide = {
+    professional: 'Professional and confident, focusing on qualifications and achievements',
+    friendly: 'Warm and personable while remaining professional, showing personality',
+    formal: 'Highly formal and traditional, suitable for conservative industries'
+  }
+
+  const systemPrompt = `You are an expert cover letter writer with years of experience helping candidates land interviews. Your goal is to write compelling, personalized cover letters that highlight the candidate's relevant experience and enthusiasm for the role.
+
+Guidelines:
+1. Tone: ${toneGuide[tone]}
+2. Length: ${lengthGuide[length]}
+3. Structure:
+   - Opening: Hook the reader, mention the specific role and company
+   - Body: Connect candidate's experience to job requirements, use specific examples
+   - Closing: Express enthusiasm, include call to action
+4. DO NOT use generic phrases like "I am writing to apply..." or "I believe I am a good fit..."
+5. Use specific achievements and metrics from the CV when possible
+6. Tailor the letter specifically to the job description
+7. Show knowledge of the company if any context is provided
+8. Be authentic - avoid overly formal or robotic language
+
+${customInstructions ? `Additional instructions: ${customInstructions}` : ''}`
+
+  const cvContext = `
+=== CANDIDATE INFORMATION ===
+Name: ${cvData.personalInfo?.fullName || 'Not provided'}
+Email: ${cvData.personalInfo?.email || 'Not provided'}
+Phone: ${cvData.personalInfo?.phone || 'Not provided'}
+
+Summary: ${cvData.summary || 'Not provided'}
+
+Experience:
+${cvData.experience?.map(exp => 
+  `- ${exp.title} at ${exp.company} (${exp.startDate} - ${exp.endDate || 'Present'})
+   ${exp.description || ''}`
+).join('\n') || 'Not provided'}
+
+Education:
+${cvData.education?.map(edu => 
+  `- ${edu.degree || ''} ${edu.field ? `in ${edu.field}` : ''} from ${edu.institution}`
+).join('\n') || 'Not provided'}
+
+Skills: ${cvData.skills?.join(', ') || 'Not provided'}
+`
+
+  const jobContextStr = `
+=== JOB DETAILS ===
+Company: ${jobContext.company || 'Not specified'}
+Role: ${jobContext.role || 'Not specified'}
+
+Job Description:
+${jobContext.description || 'Not provided'}
+
+Additional Notes:
+${jobContext.notes || 'None'}
+`
+
+  try {
+    const response = await callLLM(config, [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `Write a cover letter for this candidate and job:\n${cvContext}\n${jobContextStr}` }
+    ])
+
+    return { success: true, data: response.trim() }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to generate cover letter',
+    }
+  }
+}
+
+// Analyze CV against job description
+export async function analyzeCV(
+  config: LLMClientConfig,
+  payload: AnalyzeCVPayload
+): Promise<LLMResponse<CVAnalysisResult>> {
+  const { cvText, cvData, jobContext } = payload
+
+  const systemPrompt = `You are an expert ATS (Applicant Tracking System) and career coach. Analyze the provided CV against the job description and provide detailed feedback.
+
+Your analysis must be returned as valid JSON matching this EXACT structure:
+
+{
+  "overallScore": <number 0-100>,
+  "keywordAnalysis": {
+    "matchingKeywords": [
+      {
+        "keyword": "<string>",
+        "foundIn": "cv" | "both",
+        "importance": "high" | "medium" | "low"
+      }
+    ],
+    "missingKeywords": [
+      {
+        "keyword": "<string>",
+        "importance": "high" | "medium" | "low",
+        "suggestion": "<how to add this keyword naturally>"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "name": "<section name like 'Experience', 'Skills', 'Education'>",
+      "score": <number 0-100>,
+      "feedback": "<brief feedback>",
+      "improvements": ["<improvement 1>", "<improvement 2>"]
+    }
+  ],
+  "strengths": ["<strength 1>", "<strength 2>"],
+  "weaknesses": ["<weakness 1>", "<weakness 2>"],
+  "recommendations": [
+    {
+      "priority": "high" | "medium" | "low",
+      "category": "<Experience|Skills|Education|Format|Keywords|Other>",
+      "suggestion": "<specific actionable suggestion>",
+      "example": "<optional example of how to implement>"
+    }
+  ],
+  "atsCompatibility": {
+    "score": <number 0-100>,
+    "issues": ["<issue 1>", "<issue 2>"],
+    "suggestions": ["<suggestion 1>", "<suggestion 2>"]
+  }
+}
+
+Scoring Guidelines:
+- 90-100: Excellent match, highly likely to pass ATS and impress recruiters
+- 75-89: Good match, some improvements needed
+- 60-74: Fair match, significant improvements recommended
+- Below 60: Poor match, major revisions needed
+
+Focus on:
+1. Hard skills and technical keywords from job description
+2. Soft skills mentioned in job requirements
+3. Industry-specific terminology
+4. Action verbs and quantifiable achievements
+5. ATS-friendly formatting
+6. Relevance of experience to the role
+
+Return ONLY valid JSON, no other text.`
+
+  const userPrompt = `Analyze this CV against the job description:
+
+=== CV TEXT ===
+${cvText}
+
+=== JOB DETAILS ===
+Company: ${jobContext.company || 'Not specified'}
+Role: ${jobContext.role || 'Not specified'}
+
+Job Description:
+${jobContext.description || 'No job description provided'}
+
+Provide a comprehensive analysis in JSON format:`
+
+  try {
+    const response = await callLLM(config, [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ])
+
+    // Extract JSON from response
+    const jsonMatch = response.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      throw new Error('Failed to parse analysis: No JSON in response')
+    }
+
+    const analysisResult: CVAnalysisResult = JSON.parse(jsonMatch[0])
+    return { success: true, data: analysisResult }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to analyze CV',
     }
   }
 }

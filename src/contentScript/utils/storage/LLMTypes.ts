@@ -16,6 +16,8 @@ export const LLM_MODELS: Record<LLMProvider, LLMModelConfig[]> = {
     { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'openai' },
   ],
   gemini: [
+    { id: 'gemini-3-flash-preview', name: 'Gemini 3.0 Flash Preview', provider: 'gemini' },
+    { id: 'gemini-3-pro-preview', name: 'Gemini 3.0 Pro Preview', provider: 'gemini' },
     { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'gemini' },
     { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'gemini' },
     { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'gemini' },
@@ -127,6 +129,8 @@ export type LLMMessageType =
   | 'LLM_PROCESS_CV'
   | 'LLM_SUGGEST_FIELD'
   | 'LLM_TEST_CONNECTION'
+  | 'LLM_GENERATE_COVER_LETTER'
+  | 'LLM_ANALYZE_CV'
 
 export interface LLMMessage {
   type: LLMMessageType
@@ -156,4 +160,72 @@ export interface LLMResponse<T = any> {
   data?: T
   error?: string
   message?: string
+}
+
+// Cover Letter types
+export interface CoverLetterData {
+  content: string
+  jobContextId?: string
+  generatedAt: number
+  file?: LocalStorageFile
+}
+
+export interface CoverLetterStore {
+  letters: CoverLetterData[]
+  activeLetterId?: number
+}
+
+export const DEFAULT_COVER_LETTER_STORE: CoverLetterStore = {
+  letters: [],
+  activeLetterId: undefined,
+}
+
+export interface GenerateCoverLetterPayload {
+  cvData: ExtractedCVData
+  jobContext: JobContext
+  tone?: 'professional' | 'friendly' | 'formal'
+  length?: 'short' | 'medium' | 'long'
+  customInstructions?: string
+}
+
+// CV Analysis types
+export interface CVAnalysisResult {
+  overallScore: number // 0-100
+  keywordAnalysis: {
+    matchingKeywords: Array<{
+      keyword: string
+      foundIn: 'cv' | 'both'
+      importance: 'high' | 'medium' | 'low'
+    }>
+    missingKeywords: Array<{
+      keyword: string
+      importance: 'high' | 'medium' | 'low'
+      suggestion: string
+    }>
+  }
+  sections: {
+    name: string
+    score: number
+    feedback: string
+    improvements: string[]
+  }[]
+  strengths: string[]
+  weaknesses: string[]
+  recommendations: Array<{
+    priority: 'high' | 'medium' | 'low'
+    category: string
+    suggestion: string
+    example?: string
+  }>
+  atsCompatibility: {
+    score: number
+    issues: string[]
+    suggestions: string[]
+  }
+}
+
+export interface AnalyzeCVPayload {
+  cvText: string
+  cvData?: ExtractedCVData
+  jobContext: JobContext
 }

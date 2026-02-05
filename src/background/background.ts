@@ -1,11 +1,13 @@
 import { getLLMSettings } from '@src/contentScript/utils/storage/LLMSettingsStore'
 import {
+  AnalyzeCVPayload,
+  GenerateCoverLetterPayload,
   LLMMessage,
   LLMProcessCVPayload,
   LLMResponse,
   LLMSuggestFieldPayload,
 } from '@src/contentScript/utils/storage/LLMTypes'
-import { processCV, suggestFieldValue, testConnection } from './services/llmClient'
+import { analyzeCV, generateCoverLetter, processCV, suggestFieldValue, testConnection } from './services/llmClient'
 
 // Handle messages from content scripts and popup/options
 chrome.runtime.onMessage.addListener(
@@ -68,6 +70,22 @@ async function handleMessage(message: LLMMessage): Promise<LLMResponse> {
     case 'LLM_SUGGEST_FIELD': {
       const payload = message.payload as LLMSuggestFieldPayload
       return suggestFieldValue(config, payload)
+    }
+
+    case 'LLM_GENERATE_COVER_LETTER': {
+      const payload = message.payload as GenerateCoverLetterPayload
+      if (!payload.cvData || !payload.jobContext) {
+        return { success: false, error: 'CV data and job context are required' }
+      }
+      return generateCoverLetter(config, payload)
+    }
+
+    case 'LLM_ANALYZE_CV': {
+      const payload = message.payload as AnalyzeCVPayload
+      if (!payload.cvText || !payload.jobContext) {
+        return { success: false, error: 'CV text and job context are required' }
+      }
+      return analyzeCV(config, payload)
     }
 
     default:
