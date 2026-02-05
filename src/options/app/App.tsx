@@ -336,10 +336,10 @@ const CVSection: FC = () => {
       const fileName = file.name.toLowerCase()
       const isPdf = file.type === 'application/pdf' || fileName.endsWith('.pdf')
       const isWord = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-                     file.type === 'application/msword' ||
-                     fileName.endsWith('.docx') ||
-                     fileName.endsWith('.doc')
-      
+        file.type === 'application/msword' ||
+        fileName.endsWith('.docx') ||
+        fileName.endsWith('.doc')
+
       if (isPdf || isWord) {
         // For PDFs and Word docs, don't try to read as text - just store the file
         // The file will be sent directly to the AI for processing
@@ -372,7 +372,7 @@ const CVSection: FC = () => {
   const processCV = async () => {
     const hasFile = cvData?.originalFile
     const hasText = cvText.trim() && !cvText.startsWith('[PDF file uploaded') && !cvText.startsWith('[Word document uploaded')
-    
+
     if (!hasFile && !hasText) {
       setError('Please enter or upload your CV first')
       return
@@ -384,7 +384,7 @@ const CVSection: FC = () => {
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'LLM_PROCESS_CV',
-        payload: { 
+        payload: {
           text: hasText ? cvText : undefined,
           file: hasFile ? cvData.originalFile : undefined
         },
@@ -471,13 +471,13 @@ const CVSection: FC = () => {
         disabled={cvText.startsWith('[PDF file uploaded') || cvText.startsWith('[Word document uploaded')}
       />
 
-      {cvData?.originalFile && (cvData.originalFile.type === 'application/pdf' || 
+      {cvData?.originalFile && (cvData.originalFile.type === 'application/pdf' ||
         cvData.originalFile.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
         cvData.originalFile.type === 'application/msword') && (
-        <Typography variant="body2" color="info.main">
-          File will be sent directly to the AI for processing - no text extraction needed.
-        </Typography>
-      )}
+          <Typography variant="body2" color="info.main">
+            File will be sent directly to the AI for processing - no text extraction needed.
+          </Typography>
+        )}
 
       <Stack direction="row" spacing={2}>
         <Button
@@ -501,9 +501,9 @@ const CVSection: FC = () => {
               Extracted Information
             </Typography>
             <ExtractedDataDisplay data={cvData.extractedData} />
-            
+
             <Divider sx={{ my: 2 }} />
-            
+
             <Stack direction="row" spacing={2} alignItems="center">
               <Button
                 variant="contained"
@@ -514,17 +514,17 @@ const CVSection: FC = () => {
               >
                 {saving ? 'Saving...' : 'Save to Database'}
               </Button>
-              
+
               {saveResult && (
                 <Alert severity="success" sx={{ py: 0, flexGrow: 1 }}>
-                  Added {saveResult.added} field mappings to the database. 
+                  Added {saveResult.added} field mappings to the database.
                   Your CV data is now available for form auto-filling!
                 </Alert>
               )}
             </Stack>
-            
+
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              This will save your extracted CV data as answers in the database. 
+              This will save your extracted CV data as answers in the database.
               The extension will use these to automatically fill matching form fields.
             </Typography>
           </CardContent>
@@ -965,8 +965,8 @@ const CVAnalysisSection: FC = () => {
 
   const analyzeCV = async () => {
     // Check if we have actual CV content (not just a placeholder)
-    const hasRealText = cvData?.originalText && 
-      !cvData.originalText.startsWith('[PDF') && 
+    const hasRealText = cvData?.originalText &&
+      !cvData.originalText.startsWith('[PDF') &&
       !cvData.originalText.startsWith('[Word document')
     const hasFile = cvData?.originalFile
 
@@ -1089,7 +1089,7 @@ const CVAnalysisSection: FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>Keyword Analysis</Typography>
-              
+
               <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }} color="success.main">
                 <CheckCircleIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
                 Matching Keywords ({analysis.keywordAnalysis.matchingKeywords.length})
@@ -1181,7 +1181,7 @@ const CVAnalysisSection: FC = () => {
                   {analysis.atsCompatibility.score}%
                 </Typography>
               </Stack>
-              
+
               {analysis.atsCompatibility.issues.length > 0 && (
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" color="error.main">Issues Found:</Typography>
@@ -1193,7 +1193,7 @@ const CVAnalysisSection: FC = () => {
                   ))}
                 </Box>
               )}
-              
+
               {analysis.atsCompatibility.suggestions.length > 0 && (
                 <Box>
                   <Typography variant="subtitle2" color="success.main">Suggestions:</Typography>
@@ -1335,7 +1335,7 @@ const DatabaseViewSection: FC = () => {
       alert('Please fill in Section, Field Type, and Field Name')
       return
     }
-    
+
     try {
       // Try to parse answer as JSON if it looks like JSON
       let parsedAnswer = newAnswer.answer
@@ -1346,7 +1346,7 @@ const DatabaseViewSection: FC = () => {
           // Keep as string if JSON parse fails
         }
       }
-      
+
       answers1010.add({
         section: newAnswer.section,
         fieldType: newAnswer.fieldType,
@@ -1382,6 +1382,74 @@ const DatabaseViewSection: FC = () => {
             disabled={loading}
           >
             Refresh
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={() => {
+              const data = JSON.stringify(answers1010.getAll(), null, 2)
+              const blob = new Blob([data], { type: 'application/json' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `job_app_filler_backup_${new Date().toISOString().split('T')[0]}.json`
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+              URL.revokeObjectURL(url)
+            }}
+          >
+            Export JSON
+          </Button>
+          <Button
+            variant="outlined"
+            component="label"
+            startIcon={<CloudUploadIcon />}
+          >
+            Import JSON
+            <input
+              type="file"
+              hidden
+              accept=".json"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+
+                try {
+                  const text = await file.text()
+                  const data = JSON.parse(text)
+
+                  if (!Array.isArray(data)) {
+                    throw new Error('Invalid file format: Expected an array of answers')
+                  }
+
+                  let addedCount = 0
+                  for (const item of data) {
+                    if (item.section && item.fieldType && item.fieldName && item.answer !== undefined) {
+                      try {
+                        answers1010.add({
+                          section: item.section,
+                          fieldType: item.fieldType,
+                          fieldName: item.fieldName,
+                          answer: item.answer,
+                        })
+                        addedCount++
+                      } catch (err) {
+                        // Ignore individual add errors (duplicates mostly)
+                      }
+                    }
+                  }
+
+                  await loadAnswers()
+                  alert(`Successfully imported ${addedCount} answers.`)
+                } catch (err) {
+                  alert('Failed to import: ' + (err as Error).message)
+                }
+
+                // Reset input
+                e.target.value = ''
+              }}
+            />
           </Button>
           <Button
             variant="contained"
