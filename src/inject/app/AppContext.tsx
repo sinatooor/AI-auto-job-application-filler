@@ -71,9 +71,13 @@ export const ContextProvider: FC<{
       await refresh()
       await handleFill()
       // Check if AI is enabled
-      const llmSettings = await contentScriptAPI.send('getLLMSettings')
-      if (llmSettings.ok && llmSettings.data?.apiKey) {
-        setAiEnabled(true)
+      try {
+        const llmSettings = await contentScriptAPI.send('getLLMSettings')
+        if (llmSettings.ok && llmSettings.data?.apiKey) {
+          setAiEnabled(true)
+        }
+      } catch (e) {
+        console.error('Failed to get LLM settings:', e)
       }
     })()
     backend.element.addEventListener(backend.reactMessageEventId, refresh)

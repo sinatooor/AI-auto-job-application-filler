@@ -14,11 +14,15 @@ export const AIAnswerButton: FC = () => {
   // Check for API key on mount and periodically
   useEffect(() => {
     const checkApiKey = async () => {
-      const result = await contentScriptAPI.send('getLLMSettings')
-      if (result.ok && result.data?.apiKey) {
-        setHasApiKey(true)
-      } else {
-        setHasApiKey(false)
+      try {
+        const result = await contentScriptAPI.send('getLLMSettings')
+        if (result.ok && result.data?.apiKey) {
+          setHasApiKey(true)
+        } else {
+          setHasApiKey(false)
+        }
+      } catch (error) {
+        console.error('Failed to check API key:', error)
       }
     }
     checkApiKey()
@@ -29,13 +33,21 @@ export const AIAnswerButton: FC = () => {
 
   const handleClick = async () => {
     // Re-check API key status before proceeding
-    const result = await contentScriptAPI.send('getLLMSettings')
-    if (!result.ok || !result.data?.apiKey) {
-      setHasApiKey(false)
-      setError('Configure API key in extension settings first')
+    try {
+      const result = await contentScriptAPI.send('getLLMSettings')
+      if (!result.ok || !result.data?.apiKey) {
+        setHasApiKey(false)
+        setError('Configure API key in extension settings first')
+        return
+      }
+      setHasApiKey(true)
+    } catch (e) {
+      console.error('Failed to check API key:', e)
+      // If check fails, we can't proceed safely, but maybe we should try anyway?
+      // For now, let's assume if check fails, we can't use AI.
+      setError('Connection to extension failed. Please refresh the page.')
       return
     }
-    setHasApiKey(true)
     
     setLoading(true)
     setError(null)
@@ -90,9 +102,9 @@ export const AIAnswerButton: FC = () => {
           }}
         >
           {loading ? (
-            <CircularProgress size={18} />
+            <CircularProgress size={24} />
           ) : (
-            <AutoAwesomeIcon fontSize="small" />
+            <AutoAwesomeIcon />
           )}
         </Button>
       </span>
