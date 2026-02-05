@@ -68,6 +68,7 @@ export const ContextProvider: FC<{
   useEffect(() => {
     ;(async () => {
       await editableAnswerState.init()
+      await editableAnswerState.initProbable()
       await refresh()
       await handleFill()
       // Check if AI is enabled
@@ -88,6 +89,7 @@ export const ContextProvider: FC<{
 
   const init = async () => {
     await editableAnswerState.init()
+    await editableAnswerState.initProbable()
     await refresh()
   }
 

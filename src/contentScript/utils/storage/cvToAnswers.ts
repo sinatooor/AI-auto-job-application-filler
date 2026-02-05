@@ -15,70 +15,70 @@ interface FieldMapping {
 // Personal information field mappings
 const personalInfoMappings: FieldMapping[] = [
   // Name fields
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'First Name', getValue: d => d.personalInfo?.firstName },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'first name', getValue: d => d.personalInfo?.firstName },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'firstName', getValue: d => d.personalInfo?.firstName },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Last Name', getValue: d => d.personalInfo?.lastName },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'last name', getValue: d => d.personalInfo?.lastName },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'lastName', getValue: d => d.personalInfo?.lastName },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Full Name', getValue: d => d.personalInfo?.fullName },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'full name', getValue: d => d.personalInfo?.fullName },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Name', getValue: d => d.personalInfo?.fullName },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'name', getValue: d => d.personalInfo?.fullName },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'First Name', getValue: d => d.personalInfo?.firstName },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'first name', getValue: d => d.personalInfo?.firstName },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'firstName', getValue: d => d.personalInfo?.firstName },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Last Name', getValue: d => d.personalInfo?.lastName },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'last name', getValue: d => d.personalInfo?.lastName },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'lastName', getValue: d => d.personalInfo?.lastName },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Full Name', getValue: d => d.personalInfo?.fullName },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'full name', getValue: d => d.personalInfo?.fullName },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Name', getValue: d => d.personalInfo?.fullName },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'name', getValue: d => d.personalInfo?.fullName },
   
   // Contact fields
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Email', getValue: d => d.personalInfo?.email },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'email', getValue: d => d.personalInfo?.email },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Email Address', getValue: d => d.personalInfo?.email },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'email address', getValue: d => d.personalInfo?.email },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Phone', getValue: d => d.personalInfo?.phone },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'phone', getValue: d => d.personalInfo?.phone },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Phone Number', getValue: d => d.personalInfo?.phone },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'phone number', getValue: d => d.personalInfo?.phone },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Mobile', getValue: d => d.personalInfo?.phone },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'mobile', getValue: d => d.personalInfo?.phone },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Email', getValue: d => d.personalInfo?.email },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'email', getValue: d => d.personalInfo?.email },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Email Address', getValue: d => d.personalInfo?.email },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'email address', getValue: d => d.personalInfo?.email },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Phone', getValue: d => d.personalInfo?.phone },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'phone', getValue: d => d.personalInfo?.phone },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Phone Number', getValue: d => d.personalInfo?.phone },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'phone number', getValue: d => d.personalInfo?.phone },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Mobile', getValue: d => d.personalInfo?.phone },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'mobile', getValue: d => d.personalInfo?.phone },
   
   // Location fields
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Address', getValue: d => d.personalInfo?.address },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'address', getValue: d => d.personalInfo?.address },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Street Address', getValue: d => d.personalInfo?.address },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'City', getValue: d => d.personalInfo?.city },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'city', getValue: d => d.personalInfo?.city },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'State', getValue: d => d.personalInfo?.state },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'state', getValue: d => d.personalInfo?.state },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Province', getValue: d => d.personalInfo?.state },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Zip Code', getValue: d => d.personalInfo?.zipCode },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'zip code', getValue: d => d.personalInfo?.zipCode },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Postal Code', getValue: d => d.personalInfo?.zipCode },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'postal code', getValue: d => d.personalInfo?.zipCode },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'zipCode', getValue: d => d.personalInfo?.zipCode },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Country', getValue: d => d.personalInfo?.country },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'country', getValue: d => d.personalInfo?.country },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Address', getValue: d => d.personalInfo?.address },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'address', getValue: d => d.personalInfo?.address },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Street Address', getValue: d => d.personalInfo?.address },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'City', getValue: d => d.personalInfo?.city },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'city', getValue: d => d.personalInfo?.city },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'State', getValue: d => d.personalInfo?.state },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'state', getValue: d => d.personalInfo?.state },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Province', getValue: d => d.personalInfo?.state },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Zip Code', getValue: d => d.personalInfo?.zipCode },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'zip code', getValue: d => d.personalInfo?.zipCode },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Postal Code', getValue: d => d.personalInfo?.zipCode },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'postal code', getValue: d => d.personalInfo?.zipCode },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'zipCode', getValue: d => d.personalInfo?.zipCode },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Country', getValue: d => d.personalInfo?.country },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'country', getValue: d => d.personalInfo?.country },
   
   // Social/Professional links
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'LinkedIn', getValue: d => d.personalInfo?.linkedIn },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'linkedin', getValue: d => d.personalInfo?.linkedIn },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'LinkedIn URL', getValue: d => d.personalInfo?.linkedIn },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'LinkedIn Profile', getValue: d => d.personalInfo?.linkedIn },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'GitHub', getValue: d => d.personalInfo?.github },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'github', getValue: d => d.personalInfo?.github },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'GitHub URL', getValue: d => d.personalInfo?.github },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Website', getValue: d => d.personalInfo?.website },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'website', getValue: d => d.personalInfo?.website },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Portfolio', getValue: d => d.personalInfo?.website },
-  { section: 'Personal Information', fieldType: 'text', fieldName: 'Personal Website', getValue: d => d.personalInfo?.website },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'LinkedIn', getValue: d => d.personalInfo?.linkedIn },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'linkedin', getValue: d => d.personalInfo?.linkedIn },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'LinkedIn URL', getValue: d => d.personalInfo?.linkedIn },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'LinkedIn Profile', getValue: d => d.personalInfo?.linkedIn },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'GitHub', getValue: d => d.personalInfo?.github },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'github', getValue: d => d.personalInfo?.github },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'GitHub URL', getValue: d => d.personalInfo?.github },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Website', getValue: d => d.personalInfo?.website },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'website', getValue: d => d.personalInfo?.website },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Portfolio', getValue: d => d.personalInfo?.website },
+  { section: 'Personal Information', fieldType: 'TextInput', fieldName: 'Personal Website', getValue: d => d.personalInfo?.website },
 ]
 
 // Summary/About mappings
 const summaryMappings: FieldMapping[] = [
-  { section: 'Personal Information', fieldType: 'textarea', fieldName: 'Summary', getValue: d => d.summary },
-  { section: 'Personal Information', fieldType: 'textarea', fieldName: 'summary', getValue: d => d.summary },
-  { section: 'Personal Information', fieldType: 'textarea', fieldName: 'About', getValue: d => d.summary },
-  { section: 'Personal Information', fieldType: 'textarea', fieldName: 'about', getValue: d => d.summary },
-  { section: 'Personal Information', fieldType: 'textarea', fieldName: 'Professional Summary', getValue: d => d.summary },
-  { section: 'Personal Information', fieldType: 'textarea', fieldName: 'About Me', getValue: d => d.summary },
-  { section: 'Personal Information', fieldType: 'textarea', fieldName: 'Bio', getValue: d => d.summary },
-  { section: 'Personal Information', fieldType: 'textarea', fieldName: 'Overview', getValue: d => d.summary },
+  { section: 'Personal Information', fieldType: 'Textarea', fieldName: 'Summary', getValue: d => d.summary },
+  { section: 'Personal Information', fieldType: 'Textarea', fieldName: 'summary', getValue: d => d.summary },
+  { section: 'Personal Information', fieldType: 'Textarea', fieldName: 'About', getValue: d => d.summary },
+  { section: 'Personal Information', fieldType: 'Textarea', fieldName: 'about', getValue: d => d.summary },
+  { section: 'Personal Information', fieldType: 'Textarea', fieldName: 'Professional Summary', getValue: d => d.summary },
+  { section: 'Personal Information', fieldType: 'Textarea', fieldName: 'About Me', getValue: d => d.summary },
+  { section: 'Personal Information', fieldType: 'Textarea', fieldName: 'Bio', getValue: d => d.summary },
+  { section: 'Personal Information', fieldType: 'Textarea', fieldName: 'Overview', getValue: d => d.summary },
 ]
 
 /**
@@ -97,61 +97,61 @@ function generateExperienceAnswers(data: ExtractedCVData): NewAnswer[] {
     const section = 'Work Experience'
     
     if (exp.company) {
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Company`, answer: exp.company })
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Company Name`, answer: exp.company })
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Employer`, answer: exp.company })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Company`, answer: exp.company })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Company Name`, answer: exp.company })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Employer`, answer: exp.company })
       if (index === 0) {
-        answers.push({ section, fieldType: 'text', fieldName: 'Company', answer: exp.company })
-        answers.push({ section, fieldType: 'text', fieldName: 'Company Name', answer: exp.company })
-        answers.push({ section, fieldType: 'text', fieldName: 'Current Company', answer: exp.company })
-        answers.push({ section, fieldType: 'text', fieldName: 'Most Recent Company', answer: exp.company })
-        answers.push({ section, fieldType: 'text', fieldName: 'Employer', answer: exp.company })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Company', answer: exp.company })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Company Name', answer: exp.company })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Current Company', answer: exp.company })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Most Recent Company', answer: exp.company })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Employer', answer: exp.company })
       }
     }
     
     if (exp.title) {
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Job Title`, answer: exp.title })
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Title`, answer: exp.title })
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Position`, answer: exp.title })
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Role`, answer: exp.title })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Job Title`, answer: exp.title })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Title`, answer: exp.title })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Position`, answer: exp.title })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Role`, answer: exp.title })
       if (index === 0) {
-        answers.push({ section, fieldType: 'text', fieldName: 'Job Title', answer: exp.title })
-        answers.push({ section, fieldType: 'text', fieldName: 'Title', answer: exp.title })
-        answers.push({ section, fieldType: 'text', fieldName: 'Position', answer: exp.title })
-        answers.push({ section, fieldType: 'text', fieldName: 'Current Title', answer: exp.title })
-        answers.push({ section, fieldType: 'text', fieldName: 'Current Position', answer: exp.title })
-        answers.push({ section, fieldType: 'text', fieldName: 'Role', answer: exp.title })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Job Title', answer: exp.title })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Title', answer: exp.title })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Position', answer: exp.title })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Current Title', answer: exp.title })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Current Position', answer: exp.title })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Role', answer: exp.title })
       }
     }
     
     if (exp.location) {
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Location`, answer: exp.location })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Location`, answer: exp.location })
       if (index === 0) {
-        answers.push({ section, fieldType: 'text', fieldName: 'Location', answer: exp.location })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Location', answer: exp.location })
       }
     }
     
     if (exp.startDate) {
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Start Date`, answer: exp.startDate })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Start Date`, answer: exp.startDate })
       if (index === 0) {
-        answers.push({ section, fieldType: 'text', fieldName: 'Start Date', answer: exp.startDate })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Start Date', answer: exp.startDate })
       }
     }
     
     if (exp.endDate) {
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}End Date`, answer: exp.endDate })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}End Date`, answer: exp.endDate })
       if (index === 0) {
-        answers.push({ section, fieldType: 'text', fieldName: 'End Date', answer: exp.endDate })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'End Date', answer: exp.endDate })
       }
     }
     
     if (exp.description) {
-      answers.push({ section, fieldType: 'textarea', fieldName: `${prefix}Description`, answer: exp.description })
-      answers.push({ section, fieldType: 'textarea', fieldName: `${prefix}Responsibilities`, answer: exp.description })
+      answers.push({ section, fieldType: 'Textarea', fieldName: `${prefix}Description`, answer: exp.description })
+      answers.push({ section, fieldType: 'Textarea', fieldName: `${prefix}Responsibilities`, answer: exp.description })
       if (index === 0) {
-        answers.push({ section, fieldType: 'textarea', fieldName: 'Description', answer: exp.description })
-        answers.push({ section, fieldType: 'textarea', fieldName: 'Job Description', answer: exp.description })
-        answers.push({ section, fieldType: 'textarea', fieldName: 'Responsibilities', answer: exp.description })
+        answers.push({ section, fieldType: 'Textarea', fieldName: 'Description', answer: exp.description })
+        answers.push({ section, fieldType: 'Textarea', fieldName: 'Job Description', answer: exp.description })
+        answers.push({ section, fieldType: 'Textarea', fieldName: 'Responsibilities', answer: exp.description })
       }
     }
   })
@@ -174,59 +174,59 @@ function generateEducationAnswers(data: ExtractedCVData): NewAnswer[] {
     const section = 'Education'
     
     if (edu.institution) {
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}School`, answer: edu.institution })
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}University`, answer: edu.institution })
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Institution`, answer: edu.institution })
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}College`, answer: edu.institution })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}School`, answer: edu.institution })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}University`, answer: edu.institution })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Institution`, answer: edu.institution })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}College`, answer: edu.institution })
       if (index === 0) {
-        answers.push({ section, fieldType: 'text', fieldName: 'School', answer: edu.institution })
-        answers.push({ section, fieldType: 'text', fieldName: 'University', answer: edu.institution })
-        answers.push({ section, fieldType: 'text', fieldName: 'Institution', answer: edu.institution })
-        answers.push({ section, fieldType: 'text', fieldName: 'College', answer: edu.institution })
-        answers.push({ section, fieldType: 'text', fieldName: 'School Name', answer: edu.institution })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'School', answer: edu.institution })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'University', answer: edu.institution })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Institution', answer: edu.institution })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'College', answer: edu.institution })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'School Name', answer: edu.institution })
       }
     }
     
     if (edu.degree) {
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Degree`, answer: edu.degree })
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Degree Type`, answer: edu.degree })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Degree`, answer: edu.degree })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Degree Type`, answer: edu.degree })
       if (index === 0) {
-        answers.push({ section, fieldType: 'text', fieldName: 'Degree', answer: edu.degree })
-        answers.push({ section, fieldType: 'text', fieldName: 'Degree Type', answer: edu.degree })
-        answers.push({ section, fieldType: 'text', fieldName: 'Highest Degree', answer: edu.degree })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Degree', answer: edu.degree })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Degree Type', answer: edu.degree })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Highest Degree', answer: edu.degree })
       }
     }
     
     if (edu.field) {
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Field of Study`, answer: edu.field })
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Major`, answer: edu.field })
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Discipline`, answer: edu.field })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Field of Study`, answer: edu.field })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Major`, answer: edu.field })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Discipline`, answer: edu.field })
       if (index === 0) {
-        answers.push({ section, fieldType: 'text', fieldName: 'Field of Study', answer: edu.field })
-        answers.push({ section, fieldType: 'text', fieldName: 'Major', answer: edu.field })
-        answers.push({ section, fieldType: 'text', fieldName: 'Discipline', answer: edu.field })
-        answers.push({ section, fieldType: 'text', fieldName: 'Area of Study', answer: edu.field })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Field of Study', answer: edu.field })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Major', answer: edu.field })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Discipline', answer: edu.field })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Area of Study', answer: edu.field })
       }
     }
     
     if (edu.startDate) {
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Start Date`, answer: edu.startDate })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Start Date`, answer: edu.startDate })
     }
     
     if (edu.endDate) {
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}End Date`, answer: edu.endDate })
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}Graduation Date`, answer: edu.endDate })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}End Date`, answer: edu.endDate })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}Graduation Date`, answer: edu.endDate })
       if (index === 0) {
-        answers.push({ section, fieldType: 'text', fieldName: 'Graduation Date', answer: edu.endDate })
-        answers.push({ section, fieldType: 'text', fieldName: 'Graduation Year', answer: edu.endDate })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Graduation Date', answer: edu.endDate })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Graduation Year', answer: edu.endDate })
       }
     }
     
     if (edu.gpa) {
-      answers.push({ section, fieldType: 'text', fieldName: `${prefix}GPA`, answer: edu.gpa })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `${prefix}GPA`, answer: edu.gpa })
       if (index === 0) {
-        answers.push({ section, fieldType: 'text', fieldName: 'GPA', answer: edu.gpa })
-        answers.push({ section, fieldType: 'text', fieldName: 'Grade Point Average', answer: edu.gpa })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'GPA', answer: edu.gpa })
+        answers.push({ section, fieldType: 'TextInput', fieldName: 'Grade Point Average', answer: edu.gpa })
       }
     }
   })
@@ -247,11 +247,11 @@ function generateSkillsAnswers(data: ExtractedCVData): NewAnswer[] {
   const skillsText = data.skills.join(', ')
   const section = 'Skills'
   
-  answers.push({ section, fieldType: 'textarea', fieldName: 'Skills', answer: skillsText })
-  answers.push({ section, fieldType: 'textarea', fieldName: 'skills', answer: skillsText })
-  answers.push({ section, fieldType: 'textarea', fieldName: 'Technical Skills', answer: skillsText })
-  answers.push({ section, fieldType: 'textarea', fieldName: 'Key Skills', answer: skillsText })
-  answers.push({ section, fieldType: 'text', fieldName: 'Skills', answer: skillsText })
+  answers.push({ section, fieldType: 'Textarea', fieldName: 'Skills', answer: skillsText })
+  answers.push({ section, fieldType: 'Textarea', fieldName: 'skills', answer: skillsText })
+  answers.push({ section, fieldType: 'Textarea', fieldName: 'Technical Skills', answer: skillsText })
+  answers.push({ section, fieldType: 'Textarea', fieldName: 'Key Skills', answer: skillsText })
+  answers.push({ section, fieldType: 'TextInput', fieldName: 'Skills', answer: skillsText })
   
   return answers
 }
@@ -271,16 +271,16 @@ function generateLanguageAnswers(data: ExtractedCVData): NewAnswer[] {
     l.proficiency ? `${l.language} (${l.proficiency})` : l.language
   ).join(', ')
   
-  answers.push({ section, fieldType: 'textarea', fieldName: 'Languages', answer: languagesText })
-  answers.push({ section, fieldType: 'text', fieldName: 'Languages', answer: languagesText })
-  answers.push({ section, fieldType: 'text', fieldName: 'Languages Spoken', answer: languagesText })
+  answers.push({ section, fieldType: 'Textarea', fieldName: 'Languages', answer: languagesText })
+  answers.push({ section, fieldType: 'TextInput', fieldName: 'Languages', answer: languagesText })
+  answers.push({ section, fieldType: 'TextInput', fieldName: 'Languages Spoken', answer: languagesText })
   
   // Individual language entries
   data.languages.forEach((lang, index) => {
     if (lang.language) {
-      answers.push({ section, fieldType: 'text', fieldName: `Language ${index + 1}`, answer: lang.language })
+      answers.push({ section, fieldType: 'TextInput', fieldName: `Language ${index + 1}`, answer: lang.language })
       if (lang.proficiency) {
-        answers.push({ section, fieldType: 'text', fieldName: `Language ${index + 1} Proficiency`, answer: lang.proficiency })
+        answers.push({ section, fieldType: 'TextInput', fieldName: `Language ${index + 1} Proficiency`, answer: lang.proficiency })
       }
     }
   })
@@ -303,9 +303,9 @@ function generateCertificationAnswers(data: ExtractedCVData): NewAnswer[] {
     c.issuer ? `${c.name} (${c.issuer})` : c.name
   ).join(', ')
   
-  answers.push({ section, fieldType: 'textarea', fieldName: 'Certifications', answer: certsText })
-  answers.push({ section, fieldType: 'text', fieldName: 'Certifications', answer: certsText })
-  answers.push({ section, fieldType: 'text', fieldName: 'Licenses and Certifications', answer: certsText })
+  answers.push({ section, fieldType: 'Textarea', fieldName: 'Certifications', answer: certsText })
+  answers.push({ section, fieldType: 'TextInput', fieldName: 'Certifications', answer: certsText })
+  answers.push({ section, fieldType: 'TextInput', fieldName: 'Licenses and Certifications', answer: certsText })
   
   return answers
 }

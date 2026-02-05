@@ -34,6 +34,12 @@ server.register('deleteAnswer', async (id: number) => {
   return answers1010.delete(id)
 })
 
+server.register('getProbableAnswers', async (fieldPath: FieldPath) => {
+  return answers1010
+    .searchProbable(fieldPath.fieldName)
+    .map((record) => convert1010To106(record))
+})
+
 // LLM-related methods
 server.register('getLLMSettings', async () => {
   return getLLMSettings()

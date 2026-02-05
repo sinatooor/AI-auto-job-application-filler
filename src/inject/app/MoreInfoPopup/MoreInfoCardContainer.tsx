@@ -16,6 +16,7 @@ import { MoreInfoHeader } from './MoreInfoHeader'
 import { FieldNotice, Item } from './components'
 import { AnswersSection } from './AnswerSection'
 import { FieldInfo } from './FieldInfo'
+import { ProbableValuesSection } from './ProbableValuesSection'
 
 const MoreInfoCardContainer: FC = () => {
   const { currentValue, fieldNotice } = useAppContext()
@@ -41,6 +42,9 @@ const MoreInfoCardContainer: FC = () => {
 
             <Item>
               <AnswersSection />
+            </Item>
+            <Item>
+              <ProbableValuesSection />
             </Item>
             <Item>
               <Typography variant="h6">Current Value</Typography>

@@ -6,12 +6,14 @@ import { contentScriptAPI } from '../services/contentScriptApi'
 
 export type EditableAnswerState = {
   answers: EditableAnswer[]
+  probableAnswers: EditableAnswer[]
   initAnswer?: (
     originalAnswer: Answer & { id?: number | string },
     isNew?: boolean,
     editable?: boolean
   ) => EditableAnswer
   init: () => Promise<void>
+  initProbable: () => Promise<void>
   setEditable: (id: number, editable: boolean) => void
   cancelEdit: (id: number) => void
   setEditedPath: (id: number, key: keyof FieldPath, value: any) => void
@@ -40,6 +42,7 @@ export const useEditableAnswerState = (
   backend: BaseFormInput<any>
 ): EditableAnswerState => {
   const [answers, setAnswers] = useState<EditableAnswer[]>([])
+  const [probableAnswers, setProbableAnswers] = useState<EditableAnswer[]>([])
   const [editedPathMatchesExistingPath, setEditedPathMatchesExistingPath] =
     useState<boolean>(false)
 
@@ -86,6 +89,23 @@ export const useEditableAnswerState = (
       initAnswer(answer)
     )
     setAnswers(editableAnswers)
+  }
+
+  const initProbable: EditableAnswerState['initProbable'] = async () => {
+    const resp = await contentScriptAPI.send(
+      'getProbableAnswers',
+      backend.path
+    )
+    if (resp.ok && Array.isArray(resp.data)) {
+      // Exclude IDs that are already shown in the primary answers list
+      const primaryIds = new Set(
+        (await backend.answer()).map((a: Answer) => a.id)
+      )
+      const probables = (resp.data as Answer[])
+        .filter((a) => !primaryIds.has(a.id))
+        .map<EditableAnswer>((answer) => initAnswer(answer, false, false))
+      setProbableAnswers(probables)
+    }
   }
 
   const addNewAnswer: EditableAnswerState['addNewAnswer'] = (path, value) => {
@@ -196,8 +216,10 @@ export const useEditableAnswerState = (
 
   return {
     answers,
+    probableAnswers,
     cancelEdit,
     init,
+    initProbable,
     setEditable,
     setEditedPath,
     setEditedValue,

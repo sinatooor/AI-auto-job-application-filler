@@ -2,6 +2,11 @@ import elasticlunr from 'elasticlunr'
 import { NewAnswer, SavedAnswer } from './DataStoreTypes'
 import { Answer, FieldPath } from '@src/shared/utils/types'
 import { storageLogger as logger } from '@src/shared/utils/logger'
+import {
+  fieldTypeCompatible,
+  semanticFieldMatch,
+  FuzzyCandidate,
+} from '@src/shared/utils/fuzzyMatch'
 
 export const convert106To1010 = (
   answer106: Answer
@@ -239,6 +244,21 @@ export class DataStore {
     })
   }
 
+  /**
+   * Run fuzzy (Levenshtein) matching across every stored fieldName.
+   * Returns SavedAnswers annotated with a "Fuzzy: <score>" matchType.
+   */
+  fuzzySearch(fieldName: string): SavedAnswer[] {
+    const candidates: FuzzyCandidate[] = this.getAll().map((sa) => ({
+      id: sa.id,
+      fieldName: sa.fieldName,
+    }))
+    return semanticFieldMatch(fieldName, candidates, 0.4).map(({ id, score }) => ({
+      ...this.get(id),
+      matchType: `Fuzzy: ${score.toFixed(3)}`,
+    }))
+  }
+
   search({ fieldName, section, fieldType }: FieldPath): SavedAnswer[] {
     logger.group(`🔍 Searching for answer`, true)
     logger.debug('Search criteria', { data: { fieldName, section, fieldType } })
@@ -248,17 +268,19 @@ export class DataStore {
     // get matches
     const exactMatches = this.exactSearch(fieldName)
     const tsMatches = this.tsSearch(fieldName)
+    const fuzzyMatches = this.fuzzySearch(fieldName)
     
-    // combine matches
-    const results = []
+    // combine matches (exact first, then text-search, then fuzzy)
+    const results: SavedAnswer[] = []
     this.pushResults(results, exactMatches)
     this.pushResults(results, tsMatches)
+    this.pushResults(results, fuzzyMatches)
     
     logger.debug(`Combined ${results.length} total matches`)
     
-    // filter matches
+    // filter matches — use relaxed fieldType comparison
     const filteredResults = results.filter((answer: SavedAnswer) => {
-      return answer.fieldType === fieldType && answer.section === section
+      return fieldTypeCompatible(answer.fieldType, fieldType) && answer.section === section
     })
     
     logger.timeEnd('Answer search')
@@ -266,11 +288,44 @@ export class DataStore {
       data: { 
         exactMatches: exactMatches.length,
         similarMatches: tsMatches.length,
+        fuzzyMatches: fuzzyMatches.length,
         afterFilter: filteredResults.length 
       } 
     })
     logger.groupEnd()
     
     return filteredResults.slice(0, limit)
+  }
+
+  /**
+   * Cross-type probable-value search.
+   * Ignores fieldType and section — ranks ALL stored answers by fuzzy
+   * similarity to the given fieldName.
+   * Returns up to `limit` results sorted by descending similarity score.
+   */
+  searchProbable(fieldName: string, limit: number = 5): SavedAnswer[] {
+    logger.group(`🔮 Searching probable values`, true)
+    logger.debug('Probable search criteria', { data: { fieldName } })
+    logger.time('Probable search')
+
+    const candidates: FuzzyCandidate[] = this.getAll().map((sa) => ({
+      id: sa.id,
+      fieldName: sa.fieldName,
+    }))
+
+    const fuzzyResults = semanticFieldMatch(fieldName, candidates, 0.35)
+
+    const results: SavedAnswer[] = fuzzyResults.map(({ id, score }) => ({
+      ...this.get(id),
+      matchType: `Probable: ${score.toFixed(3)}`,
+    }))
+
+    logger.timeEnd('Probable search')
+    logger.success(`Found ${results.length} probable value(s)`, {
+      data: { fieldName, total: results.length },
+    })
+    logger.groupEnd()
+
+    return results.slice(0, limit)
   }
 }
