@@ -368,6 +368,14 @@ const run = async () => {
   injectScript('inject.js')
   loadApp()
   
+  // Listen for activation state requests from inject script
+  document.addEventListener('JAF_GET_ACTIVATION_STATE', async () => {
+    const isGloballyActivated = await getGlobalActivation()
+    document.dispatchEvent(new CustomEvent('JAF_ACTIVATION_STATE', {
+      detail: { activated: isGloballyActivated }
+    }))
+  })
+  
   // Check if global activation is enabled and auto-activate
   const isGloballyActivated = await getGlobalActivation()
   if (isGloballyActivated) {
@@ -384,6 +392,9 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     if (changes.global_activation.newValue === true) {
       // Activation was turned on - trigger form field detection
       document.dispatchEvent(new CustomEvent('JAF_ACTIVATE'))
+    } else {
+      // Activation was turned off - hide widgets
+      document.dispatchEvent(new CustomEvent('JAF_DEACTIVATE'))
     }
   }
 })

@@ -41,14 +41,6 @@ function isInRect(
   })
 }
 
-const handleEscape = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') {
-    e.preventDefault()
-    close()
-    document.removeEventListener('keyup', handleEscape)
-  }
-}
-
 export const usePopperState = ({init, backend}: Pick<AppContextType, "init" | "backend">): PopperState => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const anchorRef = useRef(null)
@@ -62,39 +54,52 @@ export const usePopperState = ({init, backend}: Pick<AppContextType, "init" | "b
     setIsRefreshing(false)
   }
 
-  const handleClickAway = (e: PointerEvent) => {
-    const { x, y } = e
-    const rects = [,
-      popperRef.current?.getBoundingClientRect(),
-    ]
-    const isInModal = () => e.composedPath().some((el: HTMLElement) => {
-      return el?.classList?.contains("MuiModal-root")
-    })
-    const isInside = isInRect(x, y, rects) || backend.clickIsInFormfield(e) || isInModal()
-    if (!isInside) {
-      document.removeEventListener('click', handleClickAway)
-      close()
-    }
+  const close = () => {
+    setAnchorEl(null)
   }
 
   const open = () => {
     setAnchorEl(anchorRef.current)
   }
 
-  const close = () => {
-    setAnchorEl(null)
-  }
-
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return
+
+    const handleClickAway = (e: Event) => {
+      const mouseEvent = e as globalThis.MouseEvent
+      const { clientX: x, clientY: y } = mouseEvent
+      const rects = [
+        popperRef.current?.getBoundingClientRect(),
+        anchorRef.current?.getBoundingClientRect(),
+      ]
+      const isInModal = () => mouseEvent.composedPath().some((el) => {
+        return (el as HTMLElement)?.classList?.contains("MuiModal-root")
+      })
+      const isInside = isInRect(x, y, rects) || backend.clickIsInFormfield(mouseEvent as any) || isInModal()
+      if (!isInside) {
+        close()
+      }
+    }
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        close()
+      }
+    }
+
+    // Use setTimeout to prevent the opening click from triggering close immediately
+    const timeoutId = setTimeout(() => {
       document.addEventListener('keyup', handleEscape)
       document.addEventListener('click', handleClickAway)
-    }
+    }, 10)
+    
     return () => {
+      clearTimeout(timeoutId)
       document.removeEventListener('keyup', handleEscape)
       document.removeEventListener('click', handleClickAway)
     }
-  }, [isOpen])
+  }, [isOpen, backend])
 
   const handleToggleButtonClick = (e: MouseEvent<HTMLElement>) => {
     if (!isOpen) {

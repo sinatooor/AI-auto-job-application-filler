@@ -20,10 +20,36 @@ const getRegisterInput = (domain: string): InputSetup => {
   return match ? match[1] : generic
 }
 
+// Track global activation state
+let isGloballyActivated = false
+let observer: MutationObserver | null = null
+
+// Show all JAF widgets
+function showWidgets() {
+  document.querySelectorAll('.jaf-widget').forEach((el) => {
+    (el as HTMLElement).style.display = 'inline-block'
+  })
+}
+
+// Hide all JAF widgets
+function hideWidgets() {
+  document.querySelectorAll('.jaf-widget').forEach((el) => {
+    (el as HTMLElement).style.display = 'none'
+  })
+}
+
 const run = async () => {
   const RegisterInputs = getRegisterInput(window.location.host)
-  const observer = new MutationObserver(async (_) => {
-    RegisterInputs(document)
+  
+  // Only register inputs if globally activated
+  if (!isGloballyActivated) {
+    return
+  }
+  
+  observer = new MutationObserver(async (_) => {
+    if (isGloballyActivated) {
+      RegisterInputs(document)
+    }
   })
   observer.observe(document.body, {
     childList: true,
@@ -32,15 +58,37 @@ const run = async () => {
   RegisterInputs(document)
 }
 
+// Check initial activation state from storage
+const checkActivationAndRun = async () => {
+  try {
+    // Request activation state from content script
+    const event = new CustomEvent('JAF_GET_ACTIVATION_STATE')
+    document.dispatchEvent(event)
+  } catch (e) {
+    // Fallback: assume not activated
+  }
+}
+
+// Listen for activation state response from content script
+document.addEventListener('JAF_ACTIVATION_STATE', ((e: CustomEvent) => {
+  isGloballyActivated = e.detail.activated
+  if (isGloballyActivated) {
+    run()
+    showWidgets()
+  } else {
+    hideWidgets()
+  }
+}) as EventListener)
+
 /**
  * Prevent the injected script from running until the tab is revealed.
  * For example, when you open multiple tabs at once.
  */
 if (!document.hidden) {
-  run()
+  checkActivationAndRun()
 } else {
   const f = () => {
-    run()
+    checkActivationAndRun()
     document.removeEventListener('visibilitychange', f)
   }
   document.addEventListener('visibilitychange', f)
@@ -48,8 +96,20 @@ if (!document.hidden) {
 
 // Listen for activate event from popup
 document.addEventListener('JAF_ACTIVATE', async () => {
+  isGloballyActivated = true
   const RegisterInputs = getRegisterInput(window.location.host)
   await RegisterInputs(document)
+  showWidgets()
+})
+
+// Listen for deactivate event
+document.addEventListener('JAF_DEACTIVATE', () => {
+  isGloballyActivated = false
+  hideWidgets()
+  if (observer) {
+    observer.disconnect()
+    observer = null
+  }
 })
 
 // Listen for auto-fill with AI event from popup
