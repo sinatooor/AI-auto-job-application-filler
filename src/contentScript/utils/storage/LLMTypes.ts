@@ -34,6 +34,7 @@ export interface LLMSettings {
   apiKey: string
   model: string
   autoFillEnabled: boolean
+  autoSaveLLMAnswers: boolean // Auto-save answers when AI suggests them
   includeHistoryContext: boolean
   confidenceThreshold: number // 0-1, below this triggers AI
 }
@@ -43,6 +44,7 @@ export const DEFAULT_LLM_SETTINGS: LLMSettings = {
   apiKey: '',
   model: 'gpt-4o-mini',
   autoFillEnabled: false,
+  autoSaveLLMAnswers: false,
   includeHistoryContext: false,
   confidenceThreshold: 0.7,
 }

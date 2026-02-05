@@ -9,6 +9,10 @@ import {
   Chip,
   CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   FormControl,
   FormControlLabel,
@@ -25,6 +29,13 @@ import {
   Stack,
   Switch,
   Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
   Tabs,
   TextField,
   Tooltip,
@@ -57,6 +68,8 @@ import {
   updateJobContext,
 } from '@src/contentScript/utils/storage/LLMSettingsStore'
 import { fileToLocalStorage, LocalStorageFile } from '@src/shared/utils/file'
+import { answers1010 } from '@src/contentScript/utils/storage/Answers1010'
+import { SavedAnswer } from '@src/contentScript/utils/storage/DataStoreTypes'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -67,6 +80,10 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import WarningIcon from '@mui/icons-material/Warning'
 import ErrorIcon from '@mui/icons-material/Error'
+import EditIcon from '@mui/icons-material/Edit'
+import SaveIcon from '@mui/icons-material/Save'
+import CancelIcon from '@mui/icons-material/Cancel'
+import RefreshIcon from '@mui/icons-material/Refresh'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -131,6 +148,12 @@ const LLMSettingsSection: FC = () => {
     const includeHistoryContext = event.target.checked
     await setLLMSettings({ includeHistoryContext })
     setSettings((prev) => prev ? { ...prev, includeHistoryContext } : null)
+  }
+
+  const handleAutoSaveLLMAnswersToggle = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const autoSaveLLMAnswers = event.target.checked
+    await setLLMSettings({ autoSaveLLMAnswers })
+    setSettings((prev) => prev ? { ...prev, autoSaveLLMAnswers } : null)
   }
 
   const handleThresholdChange = async (_: Event, value: number | number[]) => {
@@ -252,6 +275,16 @@ const LLMSettingsSection: FC = () => {
           />
         }
         label="Include past answers as context for AI suggestions"
+      />
+
+      <FormControlLabel
+        control={
+          <Switch
+            checked={settings.autoSaveLLMAnswers}
+            onChange={handleAutoSaveLLMAnswersToggle}
+          />
+        }
+        label="Auto-save LLM answers (automatically save when AI suggests an answer)"
       />
 
       <Box>
@@ -1145,6 +1178,350 @@ const CVAnalysisSection: FC = () => {
   )
 }
 
+// Database View Section
+const DatabaseViewSection: FC = () => {
+  const [answers, setAnswers] = useState<SavedAnswer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editedAnswer, setEditedAnswer] = useState<SavedAnswer | null>(null)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [newAnswer, setNewAnswer] = useState({
+    section: '',
+    fieldType: '',
+    fieldName: '',
+    answer: '',
+  })
+
+  const loadAnswers = async () => {
+    setLoading(true)
+    await answers1010.load()
+    const allAnswers = answers1010.getAll()
+    setAnswers(allAnswers)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    loadAnswers()
+  }, [])
+
+  const handleChangePage = (_: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
+  const handleEdit = (answer: SavedAnswer) => {
+    setEditingId(answer.id)
+    setEditedAnswer({ ...answer })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditedAnswer(null)
+  }
+
+  const handleSaveEdit = async () => {
+    if (editedAnswer) {
+      answers1010.update(editedAnswer)
+      await loadAnswers()
+      setEditingId(null)
+      setEditedAnswer(null)
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (confirm('Are you sure you want to delete this answer?')) {
+      answers1010.delete(id)
+      await loadAnswers()
+    }
+  }
+
+  const handleAddNew = async () => {
+    if (!newAnswer.section || !newAnswer.fieldType || !newAnswer.fieldName) {
+      alert('Please fill in Section, Field Type, and Field Name')
+      return
+    }
+    
+    try {
+      // Try to parse answer as JSON if it looks like JSON
+      let parsedAnswer = newAnswer.answer
+      if (newAnswer.answer.trim().startsWith('{') || newAnswer.answer.trim().startsWith('[')) {
+        try {
+          parsedAnswer = JSON.parse(newAnswer.answer)
+        } catch {
+          // Keep as string if JSON parse fails
+        }
+      }
+      
+      answers1010.add({
+        section: newAnswer.section,
+        fieldType: newAnswer.fieldType,
+        fieldName: newAnswer.fieldName,
+        answer: parsedAnswer,
+      })
+      await loadAnswers()
+      setAddDialogOpen(false)
+      setNewAnswer({ section: '', fieldType: '', fieldName: '', answer: '' })
+    } catch (error) {
+      alert('Failed to add answer: ' + (error as Error).message)
+    }
+  }
+
+  const displayAnswer = (answer: any) => {
+    if (typeof answer === 'object') {
+      return JSON.stringify(answer, null, 2)
+    }
+    return String(answer)
+  }
+
+  const paginatedAnswers = answers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+
+  return (
+    <Stack spacing={3}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography variant="h6">Saved Answers Database</Typography>
+        <Stack direction="row" spacing={2}>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={loadAnswers}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setAddDialogOpen(true)}
+          >
+            Add New Answer
+          </Button>
+        </Stack>
+      </Stack>
+
+      <Typography variant="body2" color="text.secondary">
+        View and manage all saved form answers. You can edit, delete, or add new entries.
+      </Typography>
+
+      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+        <TableContainer sx={{ maxHeight: 600 }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell>ID</TableCell>
+                <TableCell>Section</TableCell>
+                <TableCell>Field Type</TableCell>
+                <TableCell>Field Name</TableCell>
+                <TableCell>Answer</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    <CircularProgress />
+                  </TableCell>
+                </TableRow>
+              ) : paginatedAnswers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    <Typography variant="body2" color="text.secondary">
+                      No saved answers yet. Start by filling out a form or add a new answer.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedAnswers.map((answer) => (
+                  <TableRow key={answer.id} hover>
+                    <TableCell>{answer.id}</TableCell>
+                    <TableCell>
+                      {editingId === answer.id ? (
+                        <TextField
+                          size="small"
+                          value={editedAnswer?.section || ''}
+                          onChange={(e) =>
+                            setEditedAnswer({ ...editedAnswer!, section: e.target.value })
+                          }
+                        />
+                      ) : (
+                        answer.section
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingId === answer.id ? (
+                        <TextField
+                          size="small"
+                          value={editedAnswer?.fieldType || ''}
+                          onChange={(e) =>
+                            setEditedAnswer({ ...editedAnswer!, fieldType: e.target.value })
+                          }
+                        />
+                      ) : (
+                        answer.fieldType
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingId === answer.id ? (
+                        <TextField
+                          size="small"
+                          value={editedAnswer?.fieldName || ''}
+                          onChange={(e) =>
+                            setEditedAnswer({ ...editedAnswer!, fieldName: e.target.value })
+                          }
+                        />
+                      ) : (
+                        answer.fieldName
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingId === answer.id ? (
+                        <TextField
+                          size="small"
+                          multiline
+                          maxRows={4}
+                          value={displayAnswer(editedAnswer?.answer)}
+                          onChange={(e) => {
+                            let value: any = e.target.value
+                            // Try to parse as JSON
+                            try {
+                              if (value.trim().startsWith('{') || value.trim().startsWith('[')) {
+                                value = JSON.parse(value)
+                              }
+                            } catch {
+                              // Keep as string if parsing fails
+                            }
+                            setEditedAnswer({ ...editedAnswer!, answer: value })
+                          }}
+                          sx={{ minWidth: 200 }}
+                        />
+                      ) : (
+                        <Tooltip title={displayAnswer(answer.answer)}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              maxWidth: 300,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {displayAnswer(answer.answer)}
+                          </Typography>
+                        </Tooltip>
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      {editingId === answer.id ? (
+                        <Stack direction="row" spacing={1} justifyContent="flex-end">
+                          <IconButton
+                            size="small"
+                            color="success"
+                            onClick={handleSaveEdit}
+                          >
+                            <SaveIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={handleCancelEdit}
+                          >
+                            <CancelIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      ) : (
+                        <Stack direction="row" spacing={1} justifyContent="flex-end">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => handleEdit(answer)}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDelete(answer.id)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          component="div"
+          count={answers.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+      </Paper>
+
+      {/* Add New Answer Dialog */}
+      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Answer</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Section"
+              placeholder="e.g., personal-information, work-experience"
+              value={newAnswer.section}
+              onChange={(e) => setNewAnswer({ ...newAnswer, section: e.target.value })}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Field Type"
+              placeholder="e.g., text, single-select, multi-select"
+              value={newAnswer.fieldType}
+              onChange={(e) => setNewAnswer({ ...newAnswer, fieldType: e.target.value })}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Field Name"
+              placeholder="e.g., first name, email, phone"
+              value={newAnswer.fieldName}
+              onChange={(e) => setNewAnswer({ ...newAnswer, fieldName: e.target.value })}
+              required
+            />
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              label="Answer"
+              placeholder="Enter the answer value (can be JSON for complex types)"
+              value={newAnswer.answer}
+              onChange={(e) => setNewAnswer({ ...newAnswer, answer: e.target.value })}
+              helperText="For simple text, just type. For arrays/objects, use JSON format."
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleAddNew}>
+            Add Answer
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Stack>
+  )
+}
+
 // Main App
 export const App: FC = () => {
   const [tabValue, setTabValue] = useState(0)
@@ -1174,6 +1551,7 @@ export const App: FC = () => {
               <Tab label="Job Context" />
               <Tab label="Cover Letter" />
               <Tab label="CV Analysis" />
+              <Tab label="Database" />
             </Tabs>
 
             <TabPanel value={tabValue} index={0}>
@@ -1190,6 +1568,9 @@ export const App: FC = () => {
             </TabPanel>
             <TabPanel value={tabValue} index={4}>
               <CVAnalysisSection />
+            </TabPanel>
+            <TabPanel value={tabValue} index={5}>
+              <DatabaseViewSection />
             </TabPanel>
           </Paper>
         </Container>

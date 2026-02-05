@@ -175,6 +175,15 @@ export const ContextProvider: FC<{
               if (aiResult.ok && aiResult.data?.success && aiResult.data?.data) {
                 logger.success('AI suggestion received, filling field...')
                 await backend.fillWithValue(aiResult.data.data)
+                
+                // Check if auto-save is enabled for LLM answers
+                if (llmSettings.data?.autoSaveLLMAnswers) {
+                  logger.info('Auto-save is enabled, saving AI answer...')
+                  const answer = backend.fieldSnapshot
+                  await backend.save(answer)
+                  logger.success('AI answer auto-saved')
+                }
+                
                 await refresh()
                 logger.groupEnd()
                 return // AI fill succeeded, don't proceed with normal fill
@@ -226,6 +235,16 @@ export const ContextProvider: FC<{
       logger.success('AI suggestion received', { data: { suggestion: result.data.data } })
       // Fill the field with AI suggestion
       await backend.fillWithValue(result.data.data)
+      
+      // Check if auto-save is enabled
+      const llmSettings = await contentScriptAPI.send('getLLMSettings')
+      if (llmSettings.ok && llmSettings.data?.autoSaveLLMAnswers) {
+        logger.info('Auto-save is enabled, saving AI answer...')
+        const answer = backend.fieldSnapshot
+        await backend.save(answer)
+        logger.success('AI answer auto-saved')
+      }
+      
       await refresh()
       logger.success('Field filled with AI suggestion')
       logger.groupEnd()

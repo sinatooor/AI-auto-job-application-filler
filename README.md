@@ -1,53 +1,312 @@
-# Job App Filler 2.1.2
+# 🚀 AI-Powered Job Application Filler
 
-Job App Filler is a chrome extension that autofills fields properly
-on tedious job sites such as workday, icims, etc. 
+An intelligent Chrome extension that revolutionizes the job application process by automatically filling tedious application forms on platforms like Workday, Greenhouse, Lever, iCIMS, and more.
 
-[Download](https://chromewebstore.google.com/detail/job-app-filler/gdballabidaicjchgomokfmalodbkeoc)
+![Version](https://img.shields.io/badge/version-2.1.2-blue)
+![License](https://img.shields.io/badge/license-ISC-green)
+![Privacy](https://img.shields.io/badge/privacy-first-brightgreen)
 
-### Features:
 
-- Open source.
-- User's data isn't sent _anywhere_.
+---
 
-## Quickstart
+## ✨ Features
 
-To get started, clone the repo, install the packages and run webpack.
+### 🤖 AI-Powered Intelligence
+- **LLM Integration**: Connect with OpenAI GPT, Google Gemini, or Anthropic Claude
+- **Smart Field Suggestions**: AI analyzes your CV and job description to suggest optimal answers
+- **Auto-Save Options**: Configure whether AI answers save automatically or require manual confirmation
+- **Context-Aware**: Uses your work history and job context for personalized suggestions
+- **Confidence Thresholds**: Automatically trigger AI when stored answers have low confidence scores
 
+### 📝 CV & Resume Management
+- **CV Processing**: Upload and parse your CV/resume with AI
+- **Data Extraction**: Automatically extract personal info, experience, education, skills
+- **Multiple Formats**: Support for PDF, TXT, DOCX files
+- **Smart Storage**: Your CV data is stored locally and never sent to external servers (except LLM APIs when explicitly used)
+
+### 💼 Job Context Management
+- **Multi-Job Support**: Manage context for multiple job applications simultaneously
+- **Rich Details**: Store company, role, job description, and personal notes
+- **Active Context**: Switch between different job contexts easily
+- **Context Integration**: AI uses active job context for better suggestions
+
+### 📊 Advanced Features
+- **Cover Letter Generator**: AI-powered cover letter generation tailored to specific jobs
+- **CV Analysis**: Get a match score and keyword analysis comparing your CV to job descriptions
+- **ATS Optimization**: Recommendations for improving your CV's ATS compatibility
+- **Database View**: Comprehensive table interface to view, edit, and manage all saved answers
+
+### 🔒 Privacy & Security
+- **100% Open Source**: Full transparency - review the code yourself
+- **Local Storage**: Your data stays on your device
+- **No Tracking**: Zero analytics or data collection
+- **Optional AI**: Use AI features only when you want to
+- **Self-Hosted Option**: Can be configured to use your own LLM endpoints
+
+### 🎯 Form Filling
+- **Multi-Platform Support**: Works on Workday, Greenhouse, Lever, iCIMS, and many more
+- **Smart Matching**: Fuzzy matching algorithm finds the best saved answer for each field
+- **Field Types**: Supports text, dropdowns, checkboxes, radio buttons, file uploads, dates
+- **Bulk Actions**: Fill entire sections or pages with one click
+- **Manual Override**: Edit any auto-filled value before submission
+
+---
+
+## 🚀 Quick Start
+
+### Installation from Source
+
+1. **Clone the repository**
 ```bash
-git clone https://github.com/berellevy/job_app_filler.git
-npm i
-npm start
+git clone https://github.com/sinatooor/AI-auto-job-application-filler.git
+cd AI-auto-job-application-filler
 ```
 
-This will create a **dist** folder in the project root.
+2. **Install dependencies**
+```bash
+npm install
+```
 
-Install the extension locally by going to your chrome extensions page by pasting **chrome://extensions/** in your address bar
-and clicking the **Load unpacked** button on the top left of the page, choosing the **dist**
-folder in the package and hitting ok.
+3. **Build the extension**
+```bash
+# For development (with hot reload)
+npm start
 
-![how to load unpacked](https://github.com/berellevy/job_app_filler/blob/main/docs/load_unpacked.gif)
+# For production
+npm run build
+```
 
-## Project layout
+4. **Load in Chrome**
+   - Open Chrome and navigate to `chrome://extensions/`
+   - Enable "Developer mode" (toggle in top right)
+   - Click "Load unpacked"
+   - Select the `dist` folder from the project directory
 
-Because autofilling fields isn't always simple, the project structure is a bit complicated.
+![Load Unpacked Extension](https://github.com/berellevy/job_app_filler/blob/main/docs/load_unpacked.gif)
 
-**Note:** Because I want to release this project already, I've posted a [video](https://youtu.be/mXEDv9PpdGs) explaining the more complex topics.
+---
 
-### Sandboxing
+## 📖 Usage Guide
 
-The extension consists of a content script and an injected script.
-The content script injects the injected script and communicates with storage.
-The injected script handles all interactions with the webpage and renders the per-fieldd guis.
-This is because the content script has very limited access to the webpage and is sandboxed from
-any custom js on the webpage, which is needed to fill React controled form fields.
+### Initial Setup
 
-On the other hand, the script injected in the page is has no access to the extensions context,
-which is necessary to store saved responses.
+1. **Click the extension icon** in your Chrome toolbar
+2. **Go to Options** (right-click icon → Options or click on the extension)
+3. **Configure AI Settings (Optional)**
+   - Choose your LLM provider (OpenAI, Gemini, or Anthropic)
+   - Enter your API key
+   - Set auto-fill preferences and confidence thresholds
+   - Toggle auto-save for AI answers
 
-The solution to this lies in the fact that the extension context can listen for events dispatched
-on the DOM by the page and vice versa. To take advantage of that, the code contains a 'server'
-instantiated in the context script that can recieve 'requests' from a 'client' instantiated in
+### Setting Up Your Profile
+
+#### Upload Your CV
+1. Navigate to the **"CV / Resume"** tab in options
+2. Upload your CV or paste the text
+3. Click **"Process CV with AI"** to extract information
+4. Review the extracted data
+
+#### Add Job Context
+1. Go to the **"Job Context"** tab
+2. Click **"Add Job"** to create a new job entry
+3. Fill in company name, role, and job description
+4. This context helps AI provide better suggestions
+
+### Using the Extension on Job Sites
+
+1. **Navigate to a job application website** (e.g., Workday, Greenhouse)
+2. **Widget appears** next to form fields that can be auto-filled
+3. **Fill Options:**
+   - 🎯 **Fill Button**: Auto-fill with your saved answer (uses AI if confidence is low)
+   - ✨ **AI Button**: Get AI suggestion based on your CV and job context
+   - 💾 **Save Button**: Save the current field value for future use
+   - ℹ️ **More Info**: View all saved answers, edit, or manage
+
+### Database Management
+
+1. Go to the **"Database"** tab in options
+2. **View all saved answers** in a table format
+3. **Edit entries** inline by clicking the edit icon
+4. **Delete entries** you no longer need
+5. **Add new entries** manually if needed
+
+### Advanced Features
+
+#### Cover Letter Generator
+1. Process your CV and add job context first
+2. Go to **"Cover Letter"** tab
+3. Choose tone (Professional/Friendly/Formal) and length
+4. Add custom instructions if needed
+5. Click **"Generate Cover Letter"**
+6. Copy or download the result
+
+#### CV Analysis
+1. Ensure CV and job context are added
+2. Go to **"CV Analysis"** tab
+3. Click **"Analyze CV"**
+4. Review your match score, keyword analysis, and recommendations
+
+---
+
+## 🏗️ Technical Architecture
+
+### Project Structure
+
+```
+job_app_filler/
+├── src/
+│   ├── background/          # Background service worker
+│   │   └── services/
+│   │       └── llmClient.ts # LLM API integration
+│   ├── contentScript/       # Content script (sandboxed)
+│   │   ├── utils/storage/  # Data storage and management
+│   │   │   ├── Answers1010.ts
+│   │   │   ├── DataStore.ts
+│   │   │   ├── LLMTypes.ts
+│   │   │   └── LLMSettingsStore.ts
+│   │   └── contentScript.ts
+│   ├── inject/             # Injected script (page context)
+│   │   ├── app/
+│   │   │   ├── App.tsx     # Main widget app
+│   │   │   ├── AppContext.tsx
+│   │   │   ├── FieldWidget/
+│   │   │   ├── MoreInfoPopup/
+│   │   │   └── components/
+│   │   └── services/
+│   │       └── formFields/ # Form field handlers
+│   ├── options/            # Options page
+│   │   └── app/
+│   │       └── App.tsx     # Settings UI with Database view
+│   ├── popup/              # Extension popup
+│   └── shared/             # Shared utilities
+├── static/
+│   └── manifest.json       # Extension manifest
+└── dist/                   # Built extension (generated)
+```
+
+### Key Components
+
+#### Sandboxed Architecture
+The extension uses a dual-script architecture to overcome Chrome's security restrictions:
+
+- **Content Script**: Has access to Chrome APIs and storage but limited DOM access
+- **Injected Script**: Full DOM access and can interact with React-controlled forms
+- **Communication**: Custom client-server pattern using DOM events
+
+#### Data Storage
+- **Local Storage**: Chrome's `chrome.storage.local` API
+- **Search Index**: Elasticlunr for fuzzy text search
+- **Exact Match Index**: Custom indexing for fast lookups
+
+#### LLM Integration
+- **Background Service**: Isolated API calls in background worker
+- **Multiple Providers**: Unified interface for OpenAI, Gemini, and Claude
+- **Streaming**: Not currently implemented but architecture supports it
+
+---
+
+## 🛠️ Development
+
+### Prerequisites
+- Node.js 16+
+- npm or yarn
+- Chrome browser
+
+### Development Commands
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server (with hot reload)
+npm start
+
+# Build for production
+npm run build
+
+# Create a release
+npm run release
+```
+
+### Tech Stack
+
+- **Framework**: React 18 with TypeScript
+- **UI Library**: Material-UI (MUI) v5
+- **Build Tool**: Webpack 5
+- **Storage**: Chrome Storage API
+- **Search**: Elasticlunr
+- **Icons**: Material Icons
+- **State**: React Context API
+
+### Testing
+Load the extension from the `dist` folder after building. The extension includes comprehensive logging accessible through Chrome DevTools.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how you can help:
+
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/AmazingFeature`)
+3. **Commit your changes** (`git commit -m 'Add some AmazingFeature'`)
+4. **Push to the branch** (`git push origin feature/AmazingFeature`)
+5. **Open a Pull Request**
+
+### Areas for Contribution
+- Add support for more job sites
+- Improve AI prompts and suggestions
+- Enhance UI/UX
+- Add tests
+- Improve documentation
+- Fix bugs
+
+---
+
+## 🐛 Known Issues & Limitations
+
+- Some dynamically loaded forms may require page refresh
+- AI features require valid API keys from providers (user-provided)
+- File upload simulation may not work on all sites
+- Some sites with heavy anti-bot measures may not be fully supported
+
+---
+
+## 📄 License
+
+This project is licensed under the ISC License - see the LICENSE file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- Original project by [Berel Levy](https://github.com/berellevy)
+- Enhanced with AI features by the community
+- Built with ❤️ for job seekers everywhere
+
+---
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/sinatooor/AI-auto-job-application-filler/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/sinatooor/AI-auto-job-application-filler/discussions)
+
+---
+
+## 🎯 Roadmap
+
+- [ ] Streaming LLM responses
+- [ ] Custom field mapping templates
+- [ ] Import/export saved answers
+- [ ] Multi-browser support (Firefox, Edge)
+- [ ] Mobile companion app
+- [ ] LinkedIn profile import
+- [ ] Application tracking dashboard
+- [ ] Browser automation for complete applications
+
+---
+
+**⭐ If this project helps you land your dream job, consider giving it a star!**
 the injected script. The client recieves a 'response' to each 'request', mimicking classic web requests.
 
 ### Main Logic
