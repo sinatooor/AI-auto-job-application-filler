@@ -97,12 +97,7 @@ export const useEditableAnswerState = (
       backend.path
     )
     if (resp.ok && Array.isArray(resp.data)) {
-      // Exclude IDs that are already shown in the primary answers list
-      const primaryIds = new Set(
-        (await backend.answer()).map((a: Answer) => a.id)
-      )
       const probables = (resp.data as Answer[])
-        .filter((a) => !primaryIds.has(a.id))
         .map<EditableAnswer>((answer) => initAnswer(answer, false, false))
       setProbableAnswers(probables)
     }

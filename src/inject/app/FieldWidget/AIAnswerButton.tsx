@@ -97,8 +97,10 @@ export const AIAnswerButton: FC = () => {
           disabled={loading}
           sx={{ 
             minWidth: 'auto',
-            color: error ? 'error.main' : !hasApiKey ? 'action.disabled' : undefined,
-            opacity: !hasApiKey ? 0.5 : 1,
+            color: error ? 'error.main' : 'success.main',
+            '&:hover': {
+              backgroundColor: 'success.light',
+            },
           }}
         >
           {loading ? (

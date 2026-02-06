@@ -70,7 +70,19 @@ export const ContextProvider: FC<{
       await editableAnswerState.init()
       await editableAnswerState.initProbable()
       await refresh()
-      await handleFill()
+
+      // Check if auto-fill on load is enabled (DB only, no AI)
+      try {
+        const autoFillResp = await contentScriptAPI.send('getAutoFillOnLoad')
+        if (autoFillResp.ok && autoFillResp.data) {
+          // Auto-fill from database only
+          await backend.fill()
+          await refresh()
+        }
+      } catch (e) {
+        console.error('Auto-fill on load failed:', e)
+      }
+
       // Check if AI is enabled
       try {
         const llmSettings = await contentScriptAPI.send('getLLMSettings')
@@ -153,14 +165,26 @@ export const ContextProvider: FC<{
   }
 
   const handleAIAnswer = async () => {
-    // Get AI suggestion through content script
+    // Try filling from database first
+    await editableAnswerState.init()
+    if (editableAnswerState.answers.length > 0) {
+      await backend.fill()
+      await refresh()
+      // Check if fill was successful
+      const filledFromDB = backend.isFilled(
+        backend.currentValue(),
+        backend.answerValue.prepForFill(editableAnswerState.answers)
+      )
+      if (filledFromDB) return
+    }
+
+    // No DB match or fill failed — fall back to AI
     const result = await contentScriptAPI.send('getLLMSuggestion', {
       fieldPath: backend.path,
       currentValue: backend.currentValue(),
     })
     
     if (result.ok && result.data?.success && result.data?.data) {
-      // Fill the field with AI suggestion
       await backend.fillWithValue(result.data.data)
       await refresh()
     } else {

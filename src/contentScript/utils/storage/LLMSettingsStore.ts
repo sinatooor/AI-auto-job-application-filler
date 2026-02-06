@@ -17,6 +17,7 @@ const STORAGE_KEYS = {
   JOB_CONTEXTS: 'job_contexts',
   COVER_LETTERS: 'cover_letters',
   GLOBAL_ACTIVATION: 'global_activation',
+  AUTO_FILL_ON_LOAD: 'auto_fill_on_load',
 }
 
 // Global Activation State
@@ -27,6 +28,16 @@ export async function getGlobalActivation(): Promise<boolean> {
 
 export async function setGlobalActivation(enabled: boolean): Promise<void> {
   await chrome.storage.local.set({ [STORAGE_KEYS.GLOBAL_ACTIVATION]: enabled })
+}
+
+// Auto-fill on load (from database only, no AI)
+export async function getAutoFillOnLoad(): Promise<boolean> {
+  const result = await chrome.storage.local.get(STORAGE_KEYS.AUTO_FILL_ON_LOAD)
+  return result[STORAGE_KEYS.AUTO_FILL_ON_LOAD] ?? false
+}
+
+export async function setAutoFillOnLoad(enabled: boolean): Promise<void> {
+  await chrome.storage.local.set({ [STORAGE_KEYS.AUTO_FILL_ON_LOAD]: enabled })
 }
 
 // LLM Settings

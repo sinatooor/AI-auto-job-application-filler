@@ -9,7 +9,8 @@ import {
   getCVData, 
   getActiveJobContext, 
   getLLMSettings,
-  getGlobalActivation 
+  getGlobalActivation,
+  getAutoFillOnLoad 
 } from './utils/storage/LLMSettingsStore'
 
 // Regiser server and methods accessible to injected script.
@@ -38,6 +39,10 @@ server.register('getProbableAnswers', async (fieldPath: FieldPath) => {
   return answers1010
     .searchProbable(fieldPath.fieldName)
     .map((record) => convert1010To106(record))
+})
+
+server.register('getAutoFillOnLoad', async () => {
+  return getAutoFillOnLoad()
 })
 
 // LLM-related methods

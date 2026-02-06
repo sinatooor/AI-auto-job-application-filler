@@ -58,11 +58,13 @@ import {
   clearCVData,
   deleteJobContext,
   getActiveJobContext,
+  getAutoFillOnLoad,
   getCVData,
   getJobContextStore,
   getLLMSettings,
   saveCoverLetter,
   setActiveJobContext,
+  setAutoFillOnLoad,
   setCVData,
   setLLMSettings,
   updateJobContext,
@@ -112,6 +114,7 @@ const LLMSettingsSection: FC = () => {
   const [settings, setSettings] = useState<LLMSettings | null>(null)
   const [showApiKey, setShowApiKey] = useState(false)
   const [testing, setTesting] = useState(false)
+  const [autoFillOnLoad, setAutoFillOnLoadState] = useState(false)
   const [testResult, setTestResult] = useState<{
     success: boolean
     message: string
@@ -119,6 +122,7 @@ const LLMSettingsSection: FC = () => {
 
   useEffect(() => {
     getLLMSettings().then(setSettings)
+    getAutoFillOnLoad().then(setAutoFillOnLoadState)
   }, [])
 
   const handleProviderChange = async (event: SelectChangeEvent) => {
@@ -193,6 +197,25 @@ const LLMSettingsSection: FC = () => {
 
   return (
     <Stack spacing={3}>
+      <Typography variant="h6">General Settings</Typography>
+
+      <FormControlLabel
+        control={
+          <Switch
+            checked={autoFillOnLoad}
+            onChange={async (e) => {
+              const enabled = e.target.checked
+              setAutoFillOnLoadState(enabled)
+              await setAutoFillOnLoad(enabled)
+            }}
+            color="success"
+          />
+        }
+        label="Auto-fill forms on page load (uses saved answers from database, no AI)"
+      />
+
+      <Divider />
+
       <Typography variant="h6">LLM Provider Configuration</Typography>
 
       <FormControl fullWidth>

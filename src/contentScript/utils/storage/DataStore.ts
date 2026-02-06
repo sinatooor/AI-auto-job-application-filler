@@ -167,36 +167,86 @@ export class DataStore {
     return Array.from(this.store.values())
   }
 
+  // Maximum entries per storage chunk to stay under chrome.storage.local
+  // QUOTA_BYTES_PER_ITEM (~10MB). Each chunk is stored under its own key.
+  static CHUNK_SIZE = 2000
+
   // Persist the store and current ID to chrome.storage.local
+  // Data is split across multiple keys: "<name>", "<name>_chunk_1", etc.
   async persist() {
     if (!this.loaded) {
       throw new Error('load it first')
     }
-    const data = {
-      store: Array.from(this.store.entries()), // Convert Map to array for storage
+    const entries = Array.from(this.store.entries())
+    const chunkSize = DataStore.CHUNK_SIZE
+    const totalChunks = Math.ceil(entries.length / chunkSize) || 1
+
+    // First chunk goes under the main key together with metadata
+    const storagePayload: Record<string, any> = {}
+    storagePayload[this.name] = {
+      store: entries.slice(0, chunkSize),
       autoIncrement: this.autoIncrement,
+      totalChunks,
     }
-    logger.debug('Persisting data to chrome storage', { 
-      data: { 
-        storeName: this.name, 
+
+    // Additional chunks
+    for (let i = 1; i < totalChunks; i++) {
+      const chunkKey = `${this.name}_chunk_${i}`
+      storagePayload[chunkKey] = entries.slice(
+        i * chunkSize,
+        (i + 1) * chunkSize
+      )
+    }
+
+    logger.debug('Persisting data to chrome storage', {
+      data: {
+        storeName: this.name,
         itemCount: this.store.size,
-        autoIncrement: this.autoIncrement 
-      } 
+        autoIncrement: this.autoIncrement,
+        chunks: totalChunks,
+      },
     })
-    await chrome.storage.local.set({ [this.name]: data })
+    await chrome.storage.local.set(storagePayload)
+
+    // Clean up stale chunks from previous saves that may have had more chunks
+    const allStorage = (await chrome.storage.local.get(null)) as unknown as Record<string, any>
+    const allKeys = Object.keys(allStorage)
+    const staleKeys = allKeys.filter((k) => {
+      if (!k.startsWith(`${this.name}_chunk_`)) return false
+      const idx = parseInt(k.replace(`${this.name}_chunk_`, ''), 10)
+      return idx >= totalChunks
+    })
+    if (staleKeys.length > 0) {
+      await chrome.storage.local.remove(staleKeys)
+    }
   }
 
   // Load the store and current ID from chrome.storage.local
   async load() {
     logger.info(`Loading data store: ${this.name}`)
     logger.time(`Load ${this.name}`)
-    
+
     const result = await chrome.storage.local.get(this.name)
     if (result[this.name]) {
-      const { store, autoIncrement } = result[this.name]
-      this.store = new Map(store) // Convert array back to Map
-      this.autoIncrement = autoIncrement // Restore the current ID
-      store.forEach(([id, { fieldName }]) => {
+      const { store, autoIncrement, totalChunks } = result[this.name]
+      let allEntries: [number, SavedAnswer][] = store
+
+      // Load additional chunks if present
+      if (totalChunks && totalChunks > 1) {
+        const chunkKeys = Array.from({ length: totalChunks - 1 }, (_, i) =>
+          `${this.name}_chunk_${i + 1}`
+        )
+        const chunks = await chrome.storage.local.get(chunkKeys)
+        for (const key of chunkKeys) {
+          if (chunks[key]) {
+            allEntries = allEntries.concat(chunks[key])
+          }
+        }
+      }
+
+      this.store = new Map(allEntries)
+      this.autoIncrement = autoIncrement
+      allEntries.forEach(([id, { fieldName }]) => {
         this.exactMatchIndex.add(fieldName, id)
         this.ts_index.addDoc({ fieldName, id })
       })
